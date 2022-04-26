@@ -1,0 +1,30 @@
+# docker-compose.yaml
+version: '3.8'
+services:
+  master:
+    image: jenkins/jenkins:lts-jdk11
+    privileged: true
+    user: root
+    ports:
+      - "443:8443"
+    container_name: master
+    volumes:
+      - /home/ubuntu/.jenkins-volume:/var/jenkins_home
+    environment:
+      - JENKINS_OPTS=--prefix=/jenkins -httpPort=-1 --httpsPort=8443 --httpsKeyStore=/var/jenkins_home/jenkins_keystore.jks --httpsKeyStorePassword=mypassword
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+        window: 120s
+        delay: 3s
+  agent1:
+    image: jenkins/ssh-agent:jdk11
+    privileged: true
+    user: root
+    container_name: agent
+    command:  bash -c "apt-get update && apt-get install git -y && setup-sshd" ]
+    expose:
+      - 22
+    environment:
+      - JENKINS_AGENT_SSH_PUBKEY=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCvIeD1Hgr3tREg6u2vdoJPxepnkA9wD4fTMwne2Tii3IXYsBXYlYwgRXf3DDZ3xETp45xACXvwcrfmXH6JGIa+p8eoOt2fKPzaueSUN/O5KtTwbARc6fhpnDUkkkJ87WXSYjWCe/lmNshZTPjzXlOhNuPoshjxU3vubItwlSBuMcsrtFd1RILSOwIAGKJL17mO/1LBpJgkvFbOPn30upYIfjjL3hgez8faWpygnRguAyx8qjj61Mikl/31mqag7JHGLiq2/D+QqYg0Yp9HpbffDA7uLV1efG2/SfX83iQraTUNGlQBelkativOWDQ+aT2jwgTeHpZwLDJ5n89nkErl1i9ObhZJ9UXL7TtqLQ/M2nBLZ1/VidEX09X38RjnOyRM0v238Ck9tuCj+wU9YvIKkwnKh2RBHMFWrPct4zGgolHWX4VQXEbPd8eZnbT3RRqCgjWIQYPEsDudABpqt0SUiTfS7G4XjhCd6zeBkiqeziqA+M/5QbAeT+0Os37t3b0= ubuntu@blackie
