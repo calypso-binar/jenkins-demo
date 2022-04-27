@@ -23,7 +23,7 @@ services:
     privileged: true
     user: root
     container_name: agent
-    command:  bash -c "apt-get update && apt-get install git -y && setup-sshd" ]
+    command:  bash -c "apt-get update && apt-get install git -y && apt-get install apt-transport-https ca-certificates -y && setup-sshd" ]
     expose:
       - 22
     environment:

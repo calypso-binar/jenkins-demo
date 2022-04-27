@@ -1,5 +1,7 @@
 ![jenkins-a-love-hate-relatiosnhip](img/title.png)
 
+This repo depicts Jenkins Setup on a local machine, once on WSL2 with an Ubuntu 20.04 LTS and once on Docker with Docker-Compose
+
 # Prerequisites
 
 ## Router Port-Forwarding
@@ -58,7 +60,6 @@ username: ubuntu
 password: <whatever you wish, but make a note of it!> 
 # close the new terminal, go your to powershell
 exit
- #>
 ```
 ```bash
 # Powershell
