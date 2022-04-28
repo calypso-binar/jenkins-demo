@@ -287,6 +287,7 @@ wsl --unregister Ubuntu-20.04-jenkins-worker-1
 - https://get.jenkins.io/war-stable/2.332.2/
 
 ### Docker
+TODO: Afterthought #1, set up everything with docker...
 ```bash
 # need a .jenkins folder under the path given
 keytool -genkey -keyalg RSA -alias selfsigned -keystore jenkins_keystore.jks -storepass mypassword -keysize 2048
