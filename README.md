@@ -72,11 +72,6 @@ wget "https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/downl
 sudo tar xzvf /tmp/openjdk.tar.gz -C /opt/
 sudo ln -sf ${JRE_BIN}/java /bin/java
 java -version
-sudo tee /etc/apache2/other/$NAME.conf &>/dev/null <<EOF
-if [ -d "/opt/.local/bin" ] ; then
-    PATH="$HOME/.local/bin:$PATH"
-fi
-EOF
 # this is a little trick to always log in as ubuntu instead of root on the newly created wsl instances based on this instance:
 sudo tee /etc/wsl.conf <<EOF
 [user]
