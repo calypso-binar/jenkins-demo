@@ -301,7 +301,7 @@ docker run -d -p 8080:8080 -p 50000:50000 --env JENKINS_OPTS="--prefix=/jenkins"
 
 ### Docker Compose
 
-Fast-forward...
+Fast-forward... You will need an already backed up .jenkins folder at this point, which will have to be made available in the /home/ubuntu folder under the same name .jenkins.
 ```powershell
 wsl --import Ubuntu-20.04-docker-compose .\Ubuntu-20.04-docker-compose Ubuntu-20.04-24.04.2022.17.00.tar
 wsl -d Ubuntu-20.04-docker-compose
