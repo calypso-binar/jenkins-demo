@@ -40,17 +40,9 @@ In this section we'll set up Jenkins on WSL2 with Ubuntu 20.04 LTS. The setup wi
 - [Security Through Azure Active Directory](https://plugins.jenkins.io/azure-ad/)
 - mail notifications
 
-
-- get your WSL IP and map it to jenkins.local in Windows's hosts file
-
 ## Create master and worker Ubuntu 20.04 instances
 
 In this step it is assumed, that there are no Ubuntu 20.04 LTS WSL2 Instances running.
-
-```bash
-# In Windows: edit hosts file, add
-172.17.249.53 jenkins.local # IP will change over time... If you plan to use this solution then make sure the IP does not change.
-```
 
 First create the base image. It will contain a JRE and net tools.
 ```powershell
