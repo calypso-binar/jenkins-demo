@@ -124,6 +124,7 @@ vi /home/ubuntu/ubuntu-20.04-jenkins-master-start.sh
 #!/bin/bash
 java -jar ~/jenkins.war --prefix=/jenkins -httpPort=-1 --httpsPort=8443 --httpsKeyStore=/home/ubuntu/ubuntu-20.04-jenkins-master.jks --httpsKeyStorePassword=mypassword
 :wq
+# further initial parameter infos on Jenkins website: https://www.jenkins.io/doc/book/installing/initial-settings/
 
 chmod u+x /home/ubuntu/ubuntu-20.04-jenkins-master-start.sh
 nohup /home/ubuntu/ubuntu-20.04-jenkins-master-start.sh &>jenkins.log &
