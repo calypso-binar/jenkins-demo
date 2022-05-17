@@ -335,3 +335,15 @@ Leave Anonymous as it is. We don't want anyone poking their nose into our busine
 For Authenticated Users we can configure a minimal set of read rights. Anything more will have to be asked by the new user from the administrator.  
 
 ![img_20.png](img_20.png)
+
+
+# Clean Up
+
+If we had enough of playing around with our local Jenkins we can always delete the WSL instances by running the following commands:
+```powershell
+# cleanup wsl
+wsl --unregister Ubuntu-20.04-jenkins-master
+wsl --unregister Ubuntu-20.04-jenkins-worker-1
+wsl --unregister Ubuntu-20.04-jenkins-worker-2
+wsl --unregister Ubuntu-20.04 
+```
