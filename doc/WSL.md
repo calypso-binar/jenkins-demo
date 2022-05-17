@@ -2,7 +2,7 @@
 
 In this section we are going to set up a master instance Jenkins with two workers on a local Windows in WSL. At the end we will have the following setup locally:
 
-![img_1.png](img/img_1.png)
+![img_1.png](../img/img_1.png)
 
 # Prerequisites
 
@@ -215,11 +215,11 @@ Remember we signed it ourselves? This means, that we can trust the URl. Just go 
 
 Example in Firefox:
 
-![img_2.png](img/img_2.png)  
-![img_3.png](img/img_3.png)
+![img_2.png](../img/img_2.png)  
+![img_3.png](../img/img_3.png)
 
 Next thing Jenkins wants from us is an initial admin password:  
-![img_4.png](img/img_4.png)  
+![img_4.png](../img/img_4.png)  
 
 Get the password by executing the following command in PowerShell:
 ```powershell
@@ -230,48 +230,48 @@ Copy and paste the initial admin password in the Administrator password field in
 
 Jenkins will then offer us to install suggested plugins or select the plugins we wish to install:
 
-![img_5.png](img/img_5.png)
+![img_5.png](../img/img_5.png)
 
 We will select the suggested plugins. we will not go into details on plugins here. 
 The suggested plugins will suffice for the time being. At the time while I was setting up Jenkins the following plugins got installed:
 
-![img_6.png](img/img_6.png)
+![img_6.png](../img/img_6.png)
 
 After the plugin installation is done Jenkins will ask us for an initial administrator username and password.
 We can fill it out however we wish. I did it the following way:
 
-![img_8.png](img/img_8.png)
+![img_8.png](../img/img_8.png)
 
 Next, Jenkins will ask for the Jenkins URL. Leave it as it is.
 
-![img_7.png](img/img_7.png)
+![img_7.png](../img/img_7.png)
 
 Nothing else left to do at this point, press "Start using Jenkins". :)
 
-![img_9.png](img/img_9.png)
+![img_9.png](../img/img_9.png)
 
 ## Connect Master Node to Worker Nodes
 
 We will open up `https://localhost:8443/jenkins/` in the browser, log in with our admin user. 
 On the left side we will see a menu. We will go to Manage Jenkins > Manage Nodes and Clouds.
 
-![img_10.png](img/img_10.png)
+![img_10.png](../img/img_10.png)
 
 We will see the default built-in node, which is the master node. For best practices, configure it to have zero executors, set it's label to master and usage to "Only build jobs with label expressions matching this node". These settings hinder jobs being built on the master node. Jobs should only be built on worker nodes.
 
-![img_11.png](img/img_11.png)
+![img_11.png](../img/img_11.png)
 
-![img_12.png](img/img_12.png)
+![img_12.png](../img/img_12.png)
 
 Save the settings.
 
 Now it is time to attach the worker nodes. We will go back to the list of nodes where we saw the built-in node before. In the menu we can press "New Node"
 
-![img_13.png](img/img_13.png)
+![img_13.png](../img/img_13.png)
 
 We will give the name "Ubuntu-20.04-jenkins-worker-1", and activate "Permanent Agent" radio button and press Create 
 
-![img_14.png](img/img_14.png)
+![img_14.png](../img/img_14.png)
 
 On the next page there will be a long form to fill.  
 We will give a meaningful description in the Description field. Something like "WSL Ubuntu-20.0 Worker 1".  
@@ -281,7 +281,7 @@ For labels we can use `worker`, `wsl`, `ubuntu-20.04`, `amd64`, separated by a s
 We will leave Usage as it is.  
 Launch method will be set to Launch agent via SSH.
 
-![img_17.png](img/img_17.png)
+![img_17.png](../img/img_17.png)
 
 Under the host we need to fill the IP address of the worker node. We can always check a worker's IP address by executing the command:  
 ```powershell
@@ -291,7 +291,7 @@ exit
 ```
 We will need to add a need a new SSH Username the first time with Private key credential to Jenkins.  
 
-![img_15.png](img/img_15.png)
+![img_15.png](../img/img_15.png)
 
 On the popup we will leave domain as Global credentials.  
 We will set Kind to SSH Username with private key, since that's what we're trying to add.  
@@ -308,7 +308,7 @@ The output must be copy-pasted to the Key section.
 We must not forget about the key's passphrase. Remember when we created the key with `ssh-keygen`?  
 That's where we also secured the private key with a password.  
 
-![img_16.png](img/img_16.png)
+![img_16.png](../img/img_16.png)
 
 We will go ahead and add the key. The popup will be closed and we will come back to the initial form were we can now select the Credentials which we just added to Jenkins.  
 Now press Advanced button. You will see, that the Port is set to 22 by default. We will use port 30, since that is what we configured for the first worker node. Later on 40 for the second.  
@@ -319,7 +319,7 @@ ssh-keyscan -H IP-OF-WORKER-NODE >> ~/.ssh/known_hosts
 ```
 Note, that both worker nodes should have the same IP, so in theory you only need to do this once. If for example we would have some remote servers instead of the wsl worker nodes at our disposal then we would have to ssh-keyscan them all. This is a best practice since the remote servers won't be automatically trusted.
 
-![img_18.png](img/img_18.png)
+![img_18.png](../img/img_18.png)
 
 ## Securing Jenkins 
 
@@ -328,13 +328,13 @@ From here we will navigate to Manage Jenkins > Configure Global Security.
 Here we will configure a minimal security, just for showcase. 
 Under Security Realm activate "Allow users to sign up". You will get a warning, that anyone who signs up can become admin. Ignore this, because the next thing we will do is to hinder anyone from becoming admin right off the bat after they registered.  
 
-![img_19.png](img/img_19.png)
+![img_19.png](../img/img_19.png)
 
 Under Authorization select Matrix-Based security.  
 Leave Anonymous as it is. We don't want anyone poking their nose into our business.  
 For Authenticated Users we can configure a minimal set of read rights. Anything more will have to be asked by the new user from the administrator.  
 
-![img_20.png](img/img_20.png)
+![img_20.png](../img/img_20.png)
 
 
 # Clean Up

@@ -3,7 +3,7 @@
 Purpose of this repo is to demonstrate various Jenkins setups and to provide step-by-step guides on how to configure them locally.
 
 # Setup
-* [Jenkins with WSL](./WSL.md)
-* TODO: [Jenkins with Docker](./Docker.md)
-* TODO: [Jenkins with Docker-Compose](./Docker-Compose.md)
-* TODO: [Jenkins with Kubernetes](./Kubernetes.md)
+* [Jenkins with WSL](doc/WSL.md)
+* TODO: [Jenkins with Docker](doc/Docker.md)
+* TODO: [Jenkins with Docker-Compose](doc/Docker-Compose.md)
+* TODO: [Jenkins with Kubernetes](doc/Kubernetes.md)
