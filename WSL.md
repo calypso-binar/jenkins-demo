@@ -286,4 +286,31 @@ wsl -d Ubuntu-20.04-jenkins-worker-1
 ifconfig # get the IP from the worker 1 from eth0
 exit
 ```
-We will to add a need a new credential
+We will need to add a need a new SSH Username the first time with Private key credential to Jenkins.  
+
+![img_15.png](img_15.png)
+
+On the popup we will leave domain as Global credentials.  
+We will set Kind to SSH Username with private key, since that's what we're trying to add.  
+The scope should be only System, so no jobs try to use the key directly.  
+ID can be whatever, but in the example `master-node-ssh-private-key` ws given.  
+Description can again be whatever meaningful, but `master node's private key` was given.  
+Username must be `ubuntu`. This is because we created the master and the worker nodes with ubuntu OS user in mind.  
+We can treat username as a secret, but not necessary.  
+Get the master instance's ssh private key contents by executing the following command in powershell:
+```powershell
+wsl -d Ubuntu-20.04-jenkins-master cat ~/.ssh/ubuntu-20.04-jenkins-master
+```
+The output must be copy-pasted to the Key section.   
+We must not forget about the key's passphrase. Remember when we created the key with `ssh-keygen`? 
+That's where we also secured the private key with a password. 
+We will go ahead and add the key. The popup will be closed and we will come back to the initial form were we can now select the Credentials which we just added to Jenkins.
+Now press Advanced button. You will see, that the Port is set to 22 by default. We will use port 30, since that is what we configured for the first worker node. Later on 40 for the second.
+We will use the default "Known hosts file Verification Strategy" for this example. It requires, that we manually add the fingerprint from the worker instance to the master instance by executing the following command in powershell:
+```
+wsl -d Ubuntu-20.04-jenkins-master
+ssh-keyscan -H IP-OF-WORKER-NODE >> ~/.ssh/known_hosts
+```
+Note, that both worker nodes should have the same IP, so in theory you only need to do this once. If for example we would have some remote servers instead of the wsl worker nodes at our disposal then we would have to ssh-keyscan them all. This is a best practice since the remote servers won't be automatically trusted.
+
+![img_16.png](img_16.png)
