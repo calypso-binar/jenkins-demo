@@ -280,6 +280,9 @@ Remote root directory should be the home folder of the ubuntu user, as in `/home
 For labels we can use `worker`, `wsl`, `ubuntu-20.04`, `amd64`, separated by a space.  
 We will leave Usage as it is.  
 Launch method will be set to Launch agent via SSH.
+
+![img_17.png](img_17.png)
+
 Under the host we need to fill the IP address of the worker node. We can always check a worker's IP address by executing the command:  
 ```powershell
 wsl -d Ubuntu-20.04-jenkins-worker-1 
@@ -302,15 +305,18 @@ Get the master instance's ssh private key contents by executing the following co
 wsl -d Ubuntu-20.04-jenkins-master cat ~/.ssh/ubuntu-20.04-jenkins-master
 ```
 The output must be copy-pasted to the Key section.   
-We must not forget about the key's passphrase. Remember when we created the key with `ssh-keygen`? 
-That's where we also secured the private key with a password. 
-We will go ahead and add the key. The popup will be closed and we will come back to the initial form were we can now select the Credentials which we just added to Jenkins.
-Now press Advanced button. You will see, that the Port is set to 22 by default. We will use port 30, since that is what we configured for the first worker node. Later on 40 for the second.
-We will use the default "Known hosts file Verification Strategy" for this example. It requires, that we manually add the fingerprint from the worker instance to the master instance by executing the following command in powershell:
+We must not forget about the key's passphrase. Remember when we created the key with `ssh-keygen`?  
+That's where we also secured the private key with a password.  
+
+![img_16.png](img_16.png)
+
+We will go ahead and add the key. The popup will be closed and we will come back to the initial form were we can now select the Credentials which we just added to Jenkins.  
+Now press Advanced button. You will see, that the Port is set to 22 by default. We will use port 30, since that is what we configured for the first worker node. Later on 40 for the second.  
+We will use the default "Known hosts file Verification Strategy" for this example. It requires, that we manually add the fingerprint from the worker instance to the master instance by executing the following command in powershell:  
 ```
 wsl -d Ubuntu-20.04-jenkins-master
 ssh-keyscan -H IP-OF-WORKER-NODE >> ~/.ssh/known_hosts
 ```
 Note, that both worker nodes should have the same IP, so in theory you only need to do this once. If for example we would have some remote servers instead of the wsl worker nodes at our disposal then we would have to ssh-keyscan them all. This is a best practice since the remote servers won't be automatically trusted.
 
-![img_16.png](img_16.png)
+![img_18.png](img_18.png)
