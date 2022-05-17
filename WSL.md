@@ -320,3 +320,18 @@ ssh-keyscan -H IP-OF-WORKER-NODE >> ~/.ssh/known_hosts
 Note, that both worker nodes should have the same IP, so in theory you only need to do this once. If for example we would have some remote servers instead of the wsl worker nodes at our disposal then we would have to ssh-keyscan them all. This is a best practice since the remote servers won't be automatically trusted.
 
 ![img_18.png](img_18.png)
+
+## Securing Jenkins 
+
+We will open up `https://localhost:8443/jenkins/` in the browser, log in with our admin user.  
+From here we will navigate to Manage Jenkins > Configure Global Security.  
+Here we will configure a minimal security, just for showcase. 
+Under Security Realm activate "Allow users to sign up". You will get a warning, that anyone who signs up can become admin. Ignore this, because the next thing we will do is to hinder anyone from becoming admin right off the bat after they registered.  
+
+![img_19.png](img_19.png)
+
+Under Authorization select Matrix-Based security.  
+Leave Anonymous as it is. We don't want anyone poking their nose into our business.  
+For Authenticated Users we can configure a minimal set of read rights. Anything more will have to be asked by the new user from the administrator.  
+
+![img_20.png](img_20.png)
