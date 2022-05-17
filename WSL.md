@@ -16,7 +16,7 @@ In this section we are going to set up a master instance Jenkins with two worker
 
 # Base
 
-First we will create the base for our Jenkins setup, which will consist of a Ubuntu 20.04 LTS with a JRE 11.0.15_8 and net tools installed on it.
+First we will create the base for our Jenkins setup, which will consist of a Ubuntu 20.04 LTS with a JRE 11.0.15_8 and net tools installed on it. The net tools will be needed later to find out the IP address of instances. 
 ```powershell
 # Powershell
 wsl --install --distribution Ubuntu-20.04
