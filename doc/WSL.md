@@ -1,4 +1,4 @@
-# Intro
+# Jenkins with WSL
 
 In this section we are going to set up a master instance Jenkins with two workers on a local Windows in WSL. At the end we will have the following setup locally:
 
