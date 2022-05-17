@@ -1,8 +1,13 @@
 ![jenkins-a-love-hate-relatiosnhip](img/title.png)
 
-This repo depicts Jenkins Setup on a local machine, once on WSL2 with an Ubuntu 20.04 LTS and once on Docker with Docker-Compose
+Purpose of this repo is to demonstrate various Jenkins setups and to provide step-by-step guides on how to configure them locally.
+
+# Setup
+[Jenkins with WSL](./WSL.md)
+
 
 # Prerequisites
+
 
 ## Router Port-Forwarding
 
@@ -42,8 +47,13 @@ In this section we'll set up Jenkins on WSL2 with Ubuntu 20.04 LTS. The setup wi
 
 ## Create master and worker Ubuntu 20.04 instances
 
-In this step it is assumed, that there are no Ubuntu 20.04 LTS WSL2 Instances running.
-
+### Prerequisites
+It is assumed, that there are no Ubuntu 20.04 LTS WSL2 Instances. You can check by executing the following command:
+```powershell
+wsl --list
+```
+If there are any, you can remove them if you choose so by running the following command:
+``````
 First create the base image. It will contain a JRE and net tools.
 ```powershell
 # Powershell
@@ -90,47 +100,10 @@ Next, create the master and the worker instances.
 ```powershell
 # Create the master node
 wsl --import Ubuntu-20.04-jenkins-master .\Ubuntu-20.04-jenkins-master Ubuntu-20.04.base.tar
-# In Windows: Create worker 1 from the base. Further workers can be created in the same way, just replace "worker-1" with something else, like "worker-2". You can also just back up the worker after it is set up and create a new one from the backup.
+# Create worker 1 from the base. Further workers can be created in the same way, just replace "worker-1" with something else, like "worker-2". You can also just back up the worker after it is set up and create a new one from the backup.
 wsl --import Ubuntu-20.04-jenkins-worker-1 .\Ubuntu-20.04-jenkins-worker-1 Ubuntu-20.04.base.tar
-# this is a little trick to always log in as ubuntu instead of root on the newly created wsl instances:
 ```
 
-Onward to configuring the master node, where we will download Jenkins into the master node and generate the master node's ssh key.
-The key will be used to communicate through ssh with the worker node.
-
-```bash
-# Powershell
-wsl -d Ubuntu-20.04-jenkins-master
-# Bash
-cd ~
-# Download Jenkins
-wget https://get.jenkins.io/war-stable/2.332.2/jenkins.war
-
-# need an ssh key to communicate with worker. Put a password on it for good measure and memorize it!
-ssh-keygen -f /home/ubuntu/.ssh/ubuntu-20.04-jenkins-master
-
-# Jenkins will be running on a secure channel. The SSL Certificate will be self-signed...
-# If you have the money for it get the certificate signed by some Certificate Authority, but for the example's sake it won't be signed and your browser will show it as such/.
-# fill out the forms as needed:
-openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout ubuntu-20.04-jenkins-master.key -out ubuntu-20.04-jenkins-master.crt
-openssl pkcs12 -export -out ubuntu-20.04-jenkins-master.pfx -inkey ubuntu-20.04-jenkins-master.key -in ubuntu-20.04-jenkins-master.crt # PW in example: mypassword, used at jenkins startup
-/opt/openjdk-11.0.15_8-jre/bin/keytool -importkeystore -srckeystore ubuntu-20.04-jenkins-master.pfx -srcstoretype pkcs12 -destkeystore ubuntu-20.04-jenkins-master.jks -deststoretype JKS  # PW in example: mypassword, used at
-rm ubuntu-20.04-jenkins-master.key ubuntu-20.04-jenkins-master.crt ubuntu-20.04-jenkins-master.pfx
-
-# Register Jenkins as a service:
-
-# Create the startup script:
-vi /home/ubuntu/ubuntu-20.04-jenkins-master-start.sh
-#!/bin/bash
-java -jar ~/jenkins.war --prefix=/jenkins -httpPort=-1 --httpsPort=8443 --httpsKeyStore=/home/ubuntu/ubuntu-20.04-jenkins-master.jks --httpsKeyStorePassword=mypassword
-:wq
-# further initial parameter infos on Jenkins website: https://www.jenkins.io/doc/book/installing/initial-settings/
-
-chmod u+x /home/ubuntu/ubuntu-20.04-jenkins-master-start.sh
-nohup /home/ubuntu/ubuntu-20.04-jenkins-master-start.sh &>jenkins.log &
-# Access Jenkins under https://localhost:8443/jenkins/
-
-```
 
 
 Set up the worker
@@ -158,7 +131,8 @@ exit
 #### Global Configuration
 
 Navigate to https://localhost:8443/jenkins/  
-Jenkins will ask for the initial password. You can get it by executing `wsl -d Ubuntu-20.04-jenkins-master cat /home/ubuntu/.jenkins/secrets/initialAdminPassword` in Powershell. 
+Jenkins will ask for the initial password. You can get it by executing the following command in Powershell:   
+`wsl -d Ubuntu-20.04-jenkins-master cat /home/ubuntu/.jenkins/secrets/initialAdminPassword`
 
 Next, Jenkins will offer a fast-paced configuration and a customized configuration.  
 ![img_5.png](img/img_5.png)  
@@ -252,6 +226,14 @@ Username: ubuntu
 Private key: contents of `/home/ubuntu/.ssh/ubuntu-20.04-jenkins-master`  
 Passphrase: the passphrase for `/home/ubuntu/.ssh/ubuntu-20.04-jenkins-master`
 
+#### Backup
+
+It is a good practice to backup the master node configuration. To do so one must stop the Jenkins master node and backup the `.jenkins` folder. If you followed this guide, then the folder can be found right next to the `jenkins.war`, under `/home/ubuntu`
+
+```sh
+# backup the master configuration
+```
+
 **Troubleshooting**:  
 You might still not be able to connect to the worker node, getting following exception over and over:
 ```log
@@ -273,6 +255,7 @@ sudo ssh-keygen -A
 sudo service ssh status # check status... might not be running
 sudo service ssh start # if not running
 ```
+
 
 ```powershell
 # cleanup wsl
