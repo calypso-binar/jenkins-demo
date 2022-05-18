@@ -46,7 +46,7 @@ JRE_DIR="openjdk-${JRE_VERSION}-jre"
 JRE_BIN="/opt/${JRE_DIR}/bin"
 JRE_ARCHITECTURE='x64'
 # just making a note here, for Raspberry PI set: JRE_ARCHITECTURE='aarch64' 
-wget "https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.15+10/OpenJDK11U-jre_${JRE_ARCHITECTURE}_linux_${JRE_VERSION}.tar.gz" -O /tmp/openjdk.tar.gz
+wget "https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.15%2B10/OpenJDK11U-jdk_${JRE_ARCHITECTURE}_linux_${JRE_VERSION}.tar.gz" -O /tmp/openjdk.tar.gz
 sudo tar xzvf /tmp/openjdk.tar.gz -C /opt/
 sudo ln -sf ${JRE_BIN}/java /bin/java
 java -version

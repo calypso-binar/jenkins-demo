@@ -6,7 +6,7 @@ There are multiple ways on how this can be done. One way is to simply log on all
 
 ## JDK 
 
-We will instruct Jenkins to install [JDK version 11.0.15_8 from AdoptOpenJDK's GitHub](https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.15+10/OpenJDK11U-jre_x64_linux_11.0.15_10.tar.gz).  
+We will instruct Jenkins to install [JDK version 11.0.15_8 from AdoptOpenJDK's GitHub](https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.15%2B10/OpenJDK11U-jdk_x64_linux_11.0.15_10.tar.gz).  
 To do that we will open up Jenkins in browser: https://localhost:8443/jenkins.  
 Onl the left side in the Menu, select Manage Jenkins. Afterwards go to Global Tool Configuration.  
 Search for the JDK installations. Press Add JDK. Delete the preconfigured installer by pressing "Delete Installer".
@@ -20,8 +20,8 @@ Add the new installer "Extract *.zip/*.tar.gz"
 For the Name just add `JDK 11.0.15_10`.    
 For Label we will use `amd64&&worker` The label comes from the worker nodes. Remember when we configured multiple labels? This is the time when we are going to use them to restrict this tool's installation on worker nodes labeled with amd64 and worker in the same time. Labels are useful when we want to direct the installation of tools on specific worker nodes.  
 For example we might have a Raspberry PI which is an aarch64 architecture. Instead of amd64 JDK we would have to install aarch64 JDK.
-In the URL just add https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.15+10/OpenJDK11U-jre_x64_linux_11.0.15_10.tar.gz  
-Subdirectory of extracted archive will be set to `openjdk-11.0.15_10-jre`. This directory can be found in the archive downloaded by jenkins. It contains the bin directory where the executables reside. Jenkins will set java's home folder to this directory.  
+In the URL just add https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.15%2B10/OpenJDK11U-jdk_x64_linux_11.0.15_10.tar.gz  
+Subdirectory of extracted archive will be set to `openjdk-11.0.15_10`. This directory can be found in the archive downloaded by jenkins. You will have to check the archive to make sure before configuring a tool like this. It contains the bin directory where the executables reside. Jenkins will set java's home folder to this directory.  
 Press save and you are done.
 
 ![img.png](../img/build-tools/img_2.png)
