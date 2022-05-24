@@ -116,7 +116,7 @@ openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout ubuntu-20.04
 # Common Name (e.g. server FQDN or YOUR name) []:elod.ddns.net
 # Email Address []: elod.molnar@gmail.com
 #
-# Optionally if we have a way to get a signed certificate:
+# Optionally if we have a way to get a signed certificate (I got one by being "eligible" on noip for some reason):
 # 1. We must generate the certificate sign request. The following command will generate a certificate sign request and the corresponding private key:
 #    openssl req -newkey rsa:2048 -keyout elod.ddns.net.key -out elod.ddns.net.csr
 # 2. Get the csr signed!
