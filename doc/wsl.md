@@ -115,6 +115,15 @@ openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout ubuntu-20.04
 # Organizational Unit Name (eg, section) []:automotive
 # Common Name (e.g. server FQDN or YOUR name) []:elod.ddns.net
 # Email Address []: elod.molnar@gmail.com
+#
+# Optionally if we have a way to get a signed certificate:
+# 1. We must generate the certificate sign request. The following command will generate a certificate sign request and the corresponding private key:
+#    openssl req -newkey rsa:2048 -keyout elod.ddns.net.key -out elod.ddns.net.csr
+# 2. Get the csr signed!
+# 3. The certificate authority will send a chain trust file back in a pem file, containing the root, the intermediate and the server certificates. We have to put it and the private key into a jks. First create the p12 keystore:
+#    openssl pkcs12 -export -in elod_ddns_net.pem-chain -inkey elod.ddns.net.key -out elod.ddns.net.certandkey.p12 -name elod.ddns.net -CAfile elod_ddns_net.pem-chain
+# 4. Then convert the p12 keystore in a java key store
+#    keytool -importkeystore -deststorepass mypassword -destkeypass mypassword -destkeystore ubuntu-20.04-jenkins-master.jks -srckeystore elod.ddns.net.certandkey.p12 -srcstoretype PKCS12 -srcstorepass mypassword -alias elod.ddns.net
 openssl pkcs12 -export -out ubuntu-20.04-jenkins-master.pfx -inkey ubuntu-20.04-jenkins-master.key -in ubuntu-20.04-jenkins-master.crt # PW in example: mypassword, used at jenkins startup
 /opt/openjdk-11.0.15_10-jre/bin/keytool -importkeystore -srckeystore ubuntu-20.04-jenkins-master.pfx -srcstoretype pkcs12 -destkeystore ubuntu-20.04-jenkins-master.jks -deststoretype JKS  # PW in this example: mypassword  
 # clean up unnecessary files 
@@ -312,7 +321,8 @@ That's where we also secured the private key with a password.
 
 We will go ahead and add the key. The popup will be closed and we will come back to the initial form were we can now select the Credentials which we just added to Jenkins.  
 Now press Advanced button. You will see, that the Port is set to 22 by default. We will use port 30, since that is what we configured for the first worker node. Later on 40 for the second.  
-We will use the default "Known hosts file Verification Strategy" for this example. It requires, that we manually add the fingerprint from the worker instance to the master instance by executing the following command in powershell:  
+We will use the default "Known hosts file Verification Strategy" for this example. It requires, that we manually add the fingerprint from the worker instance to the master instance by executing the following command in powershell.
+Note, that the ssh server needs to be started on master and worker nodes for this to work.
 ```
 wsl -d Ubuntu-20.04-jenkins-master
 ssh-keyscan -H IP-OF-WORKER-NODE >> ~/.ssh/known_hosts
