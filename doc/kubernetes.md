@@ -73,10 +73,9 @@ prometheus:
     pathType: ImplementationSpecific
     hosts:
       - calypso-binar.com
-  externalUrl:
-    - "https://calypso-binar.com/prometheus"
-  routePrefix:
-    - "/prometheus"
+  prometheusSpec: 
+    externalUrl: "https://calypso-binar.com/prometheus" #TODO 
+    routePrefix: "/prometheus" #TODO
 
 alertmanager:
   ingress:
