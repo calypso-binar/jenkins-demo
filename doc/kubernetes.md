@@ -65,17 +65,14 @@ prometheus:
     enabled: true
     annotations:
       kubernetes.io/ingress.class: "nginx"
-      nginx.ingress.kubernetes.io/rewrite-target: /$1
-      nginx.ingress.kubernetes.io/use-regex: "true"
-
     paths:
-      - /prometheus/?(.*)
-    pathType: ImplementationSpecific
+      - /prometheus
+    pathType: Prefix
     hosts:
       - calypso-binar.com
-  prometheusSpec: 
-    externalUrl: "https://calypso-binar.com/prometheus" #TODO 
-    routePrefix: "/prometheus" #TODO
+  prometheusSpec:
+    externalUrl: "https://calypso-binar.com/prometheus"
+    routePrefix: "/prometheus"
 
 alertmanager:
   ingress:
@@ -84,7 +81,6 @@ alertmanager:
       kubernetes.io/ingress.class: "nginx"
       nginx.ingress.kubernetes.io/rewrite-target: /$1
       nginx.ingress.kubernetes.io/use-regex: "true"
-
     paths:
       - /alertmanager/?(.*)
     pathType: ImplementationSpecific
@@ -92,6 +88,6 @@ alertmanager:
       - calypso-binar.com
 ```
  
- helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
- helm repo update
+ helm repo add prometheus-community https://prometheus-community.github.io/helm-charts  
+ helm repo update  
  helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-stack prometheus-community/kube-prometheus-stack -f values.yaml
