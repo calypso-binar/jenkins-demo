@@ -28,3 +28,71 @@ Mount the USB form the nfs:
 mkdir -p /media/usb
 mount -t nfs 192.168.1.200:/media/usb /media/usb
 ```
+
+# Use NFS in Kubernetes
+https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner/tree/master
+
+helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
+ --namespace nfs --create-namespace \
+ --set nfs.server=192.168.1.200 \
+ --set nfs.path=/media/usb \
+ --set storageClass.defaultClass=true \
+ --set storageClass.accessModes=ReadWriteMany
+
+ # Prometheus
+
+create a values.yaml file:
+```yaml
+grafana:
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.ingress.kubernetes.io/rewrite-target: /$1
+      nginx.ingress.kubernetes.io/use-regex: "true"
+
+    path: /grafana/?(.*)
+    pathType: ImplementationSpecific
+    hosts:
+      - calypso-binar.com
+
+  grafana.ini:
+    server:
+      root_url: https://calypso-binar.com/grafana # this host can be localhost
+
+prometheus:
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.ingress.kubernetes.io/rewrite-target: /$1
+      nginx.ingress.kubernetes.io/use-regex: "true"
+
+    paths:
+      - /prometheus/?(.*)
+    pathType: ImplementationSpecific
+    hosts:
+      - calypso-binar.com
+  externalUrl:
+    - "https://calypso-binar.com/prometheus"
+  routePrefix:
+    - "/prometheus"
+
+alertmanager:
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.ingress.kubernetes.io/rewrite-target: /$1
+      nginx.ingress.kubernetes.io/use-regex: "true"
+
+    paths:
+      - /alertmanager/?(.*)
+    pathType: ImplementationSpecific
+    hosts:
+      - calypso-binar.com
+```
+ 
+ helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+ helm repo update
+ helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-stack prometheus-community/kube-prometheus-stack -f values.yaml
