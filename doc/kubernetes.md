@@ -15,7 +15,7 @@ TODO
 # if you have an SSL Certificate and Key
 kubectl create namespace ingress-nginx
 kubectl create secret tls no-ip-ssl-cert --key calypso-binar.key --cert calypso-binar_com.pem -n ingress-nginx
-kubectl -n kube-system create secret generic no-ip-ssl-cert --from-file=./calypso-binar_com.pem
+kubectl -n ingress-nginx create secret generic no-ip-ssl-cert --from-file=./calypso-binar_com.pem
 ```
 
 ```bash
@@ -24,7 +24,7 @@ helm repo update
 # use controller.extraArgs.default-ssl-certificate only if you have a certificate installed on Kubernetes as a secret.
 # otherwise Kubernetes will provide a self-signed certificate
 helm upgrade --install --force ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace \
---set controller.extraArgs.default-ssl-certificate="kube-system/no-ip-ssl-cert"
+--set controller.extraArgs.default-ssl-certificate="ingress-nginx/no-ip-ssl-cert"
 ```
 
 # Metallb 
