@@ -1,5 +1,34 @@
 # TODO
 
+# Flannel
+TODO
+
+# Metallb
+TODO
+
+# nfs-subdir-external-provisioner
+TODO
+
+# Ingress-Nginx
+
+```bash
+# if you have an SSL Certificate and Key
+kubectl create namespace ingress-nginx
+kubectl create secret tls no-ip-ssl-cert --key calypso-binar.key --cert calypso-binar_com.pem -n ingress-nginx
+kubectl -n kube-system create secret generic no-ip-ssl-cert --from-file=./calypso-binar_com.pem
+```
+
+```bash
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+# use controller.extraArgs.default-ssl-certificate only if you have a certificate installed on Kubernetes as a secret.
+# otherwise Kubernetes will provide a self-signed certificate
+helm upgrade --install --force ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace \
+--set controller.extraArgs.default-ssl-certificate="kube-system/no-ip-ssl-cert"
+```
+
+# Metallb 
+TODO
 
 # NFS with NAS (Network Attached Storage) with USB
 Mount an USB Stick (or external SSD) to `/media/usb`  
@@ -50,12 +79,10 @@ grafana:
       kubernetes.io/ingress.class: "nginx"
       nginx.ingress.kubernetes.io/rewrite-target: /$1
       nginx.ingress.kubernetes.io/use-regex: "true"
-
     path: /grafana/?(.*)
     pathType: ImplementationSpecific
     hosts:
       - calypso-binar.com
-
   grafana.ini:
     server:
       root_url: https://calypso-binar.com/grafana # this host can be localhost
@@ -65,14 +92,16 @@ prometheus:
     enabled: true
     annotations:
       kubernetes.io/ingress.class: "nginx"
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+      nginx.ingress.kubernetes.io/use-regex: "true"
     paths:
-      - /prometheus
-    pathType: Prefix
+      - "/prometheus(/|$)(.*)"
+    pathType: ImplementationSpecific
     hosts:
       - calypso-binar.com
-  prometheusSpec:
-    externalUrl: "https://calypso-binar.com/prometheus"
-    routePrefix: "/prometheus"
+        #  prometheusSpec:
+        #    externalUrl: "https://calypso-binar.com/prometheus"
+        #    routePrefix: "/prometheus"
 
 alertmanager:
   ingress:
@@ -87,7 +116,12 @@ alertmanager:
     hosts:
       - calypso-binar.com
 ```
- 
- helm repo add prometheus-community https://prometheus-community.github.io/helm-charts  
- helm repo update  
- helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-stack prometheus-community/kube-prometheus-stack -f values.yaml
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts  
+helm repo update  
+helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-stack prometheus-community/kube-prometheus-stack -f values.yaml
+```
+
+# cert-manager
+TODO
