@@ -68,7 +68,7 @@ helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provi
  --set storageClass.defaultClass=true \
  --set storageClass.accessModes=ReadWriteMany
 
- # Prometheus
+ # Monitoring
 
 create a values.yaml file:
 ```yaml
@@ -122,6 +122,95 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm repo update  
 helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-stack prometheus-community/kube-prometheus-stack -f values.yaml
 ```
+
+# Tracing
+
+## FluentBit
+
+```bash
+helm repo add fluent https://fluent.github.io/helm-charts
+helm repo update
+helm upgrade --install --force -n tracing --create-namespace fluent-bit fluent/fluent-bit
+```
+
+## Fluentd
+
+### Helm Chart Installation
+https://github.com/fluent/helm-charts/tree/main/charts/fluentd
+
+```bash
+helm repo add fluent https://fluent.github.io/helm-charts
+helm repo update
+helm upgrade --install --force -n tracing --create-namespace fluentd fluent/fluentd
+```
+
+### OS Installation
+This part describes how to install fluentd as OS service.
+
+```bash
+vi /etc/security/limits.conf
+# add the following lines and reboot
+root soft nofile 65536
+root hard nofile 65536
+* soft nofile 65536
+* hard nofile 65536
+# :wq
+vi /etc/sysctl.conf
+# add the following lines and reboot
+net.core.somaxconn = 1024
+net.core.netdev_max_backlog = 5000
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+net.ipv4.tcp_wmem = 4096 12582912 16777216
+net.ipv4.tcp_rmem = 4096 12582912 16777216
+net.ipv4.tcp_max_syn_backlog = 8096
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.ip_local_port_range = 10240 65535
+# If forward uses port 24224, reserve that port number for use as an ephemeral port.
+# If another port, e.g., monitor_agent uses port 24220, add a comma-separated list of port numbers.
+# net.ipv4.ip_local_reserved_ports = 24220,24224
+net.ipv4.ip_local_reserved_ports = 24224
+# :wq
+```
+
+### Installation as service
+Tested on Ubuntu 23.10, where no official installer was found, so ruby was used as per documentation suggestion.  
+https://docs.fluentd.org/installation/install-by-gem
+```bash
+sudo apt-get install ruby-full
+gem install ruby_dev
+gem install fluentd --no-doc
+# verify installation:
+fluentd --setup ./fluent
+fluentd -c /home/ubuntu/fluent/fluent.conf -vv &
+echo '{"json":"message"}' | fluent-cat debug.test
+```
+
+### Create fluentd service
+```bash
+vi /etc/systemd/system/fluentd.service
+# paste the following
+[Unit]
+Description=Fluentd Daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/fluentd -c /home/ubuntu/fluent/fluent.conf -vv
+Restart=always
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+# :wq
+# start the service
+sudo systemctl daemon-reload
+sudo systemctl start fluentd
+```
+
+
+
 
 # cert-manager
 TODO
