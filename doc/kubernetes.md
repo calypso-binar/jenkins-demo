@@ -73,6 +73,9 @@ helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provi
 create a values.yaml file:
 ```yaml
 grafana:
+  persistence:
+    enabled: true
+    storageClassName: nfs-client
   ingress:
     enabled: true
     annotations:
@@ -86,10 +89,29 @@ grafana:
   grafana.ini:
     server:
       root_url: https://calypso-binar.com/grafana # this host can be localhost
+      datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://kube-prometheus-stack-prometheus:9090
+        isDefault: true  # Only one datasource should have this set to true
+      - name: Loki
+        type: Loki
+        access: proxy
+        url: http://loki-stack:3100
+        isDefault: false
 
 prometheus:
   ingress:
     enabled: true
+  monitor:
+    relabelings:
+      - action: replace
+        replacement: raspberrypi-master
+        targetLabel: cluster
     annotations:
       kubernetes.io/ingress.class: "nginx"
       nginx.ingress.kubernetes.io/rewrite-target: /$2
@@ -102,6 +124,12 @@ prometheus:
         #  prometheusSpec:
         #    externalUrl: "https://calypso-binar.com/prometheus"
         #    routePrefix: "/prometheus"
+        #  prometheusSpec:
+        #    additionalScrapeConfigs:
+        #    - job_name: 'fluentd'
+        #      static_configs:
+        #        - targets:
+        #          - 'fluentd.tracing:24231'
 
 alertmanager:
   ingress:
@@ -115,6 +143,45 @@ alertmanager:
     pathType: ImplementationSpecific
     hosts:
       - calypso-binar.com
+
+kubelet:
+  serviceMonitor:
+    cAdvisorRelabelings:
+      - action: replace
+        replacement: raspberrypi-master
+        targetLabel: cluster
+      - targetLabel: metrics_path
+        sourceLabels:
+          - "__metrics_path__"
+      - targetLabel: "instance"
+        sourceLabels:
+          - "node"
+
+defaultRules:
+  additionalRuleLabels:
+    cluster: raspberrypi-master
+
+kube-state-metrics:
+  prometheus:
+    monitor:
+      relabelings:
+        - action: replace
+          replacement: raspberrypi-master
+          targetLabel: cluster
+        - targetLabel: "instance"
+          sourceLabels:
+            - "__meta_kubernetes_pod_node_name"
+
+prometheus-node-exporter:
+  prometheus:
+    monitor:
+      relabelings:
+        - action: replace
+          replacement: raspberrypi-master
+          targetLabel: cluster
+        - targetLabel: "instance"
+          sourceLabels:
+            - "__meta_kubernetes_pod_node_name"
 ```
 
 ```bash
@@ -125,92 +192,36 @@ helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-
 
 # Tracing
 
-## FluentBit
+## Loki-Stack
+https://github.com/grafana/helm-charts/tree/main/charts/loki-stack
 
 ```bash
-helm repo add fluent https://fluent.github.io/helm-charts
+helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
-helm upgrade --install --force -n tracing --create-namespace fluent-bit fluent/fluent-bit
+helm upgrade --install --force -n monitoring --create-namespace loki-stack grafana/loki-stack -f loki-stack-values.yaml
 ```
 
-## Fluentd
+loki-stack-values.yaml:  
+```yaml
+loki:
+  config:
+    auth_enabled: false
+```
 
-### Helm Chart Installation
-https://github.com/fluent/helm-charts/tree/main/charts/fluentd
+# MariaDB
+https://www.datree.io/helm-chart/mariadb-bitnami
 
 ```bash
-helm repo add fluent https://fluent.github.io/helm-charts
+helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
-helm upgrade --install --force -n tracing --create-namespace fluentd fluent/fluentd
+helm upgrade --install --force -n mariadb --create-namespace mariadb bitnami/mariadb -f mariadb-values.yaml
 ```
 
-### OS Installation
-This part describes how to install fluentd as OS service.
-
-```bash
-vi /etc/security/limits.conf
-# add the following lines and reboot
-root soft nofile 65536
-root hard nofile 65536
-* soft nofile 65536
-* hard nofile 65536
-# :wq
-vi /etc/sysctl.conf
-# add the following lines and reboot
-net.core.somaxconn = 1024
-net.core.netdev_max_backlog = 5000
-net.core.rmem_max = 16777216
-net.core.wmem_max = 16777216
-net.ipv4.tcp_wmem = 4096 12582912 16777216
-net.ipv4.tcp_rmem = 4096 12582912 16777216
-net.ipv4.tcp_max_syn_backlog = 8096
-net.ipv4.tcp_slow_start_after_idle = 0
-net.ipv4.tcp_tw_reuse = 1
-net.ipv4.ip_local_port_range = 10240 65535
-# If forward uses port 24224, reserve that port number for use as an ephemeral port.
-# If another port, e.g., monitor_agent uses port 24220, add a comma-separated list of port numbers.
-# net.ipv4.ip_local_reserved_ports = 24220,24224
-net.ipv4.ip_local_reserved_ports = 24224
-# :wq
+mariadb-values.yaml:  
+```yaml
+auth:
+  rootPassword: "YOUR PW HERE"
 ```
-
-### Installation as service
-Tested on Ubuntu 23.10, where no official installer was found, so ruby was used as per documentation suggestion.  
-https://docs.fluentd.org/installation/install-by-gem
-```bash
-sudo apt-get install ruby-full
-gem install ruby_dev
-gem install fluentd --no-doc
-# verify installation:
-fluentd --setup ./fluent
-fluentd -c /home/ubuntu/fluent/fluent.conf -vv &
-echo '{"json":"message"}' | fluent-cat debug.test
-```
-
-### Create fluentd service
-```bash
-vi /etc/systemd/system/fluentd.service
-# paste the following
-[Unit]
-Description=Fluentd Daemon
-After=network.target
-
-[Service]
-ExecStart=/usr/local/bin/fluentd -c /home/ubuntu/fluent/fluent.conf -vv
-Restart=always
-User=root
-Group=root
-
-[Install]
-WantedBy=multi-user.target
-# :wq
-# start the service
-sudo systemctl daemon-reload
-sudo systemctl start fluentd
-```
-
-
-
 
 # cert-manager
 TODO
