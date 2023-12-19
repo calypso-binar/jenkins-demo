@@ -1,5 +1,62 @@
 # TODO
 
+# Hardware
+
+This shopping list is the bare minimum for the project, you can always get more or get better ones:
+
+- 4 x Raspberry PI 4B GGB RAM
+- 4x Micro SD Cards: SanDisk Ultra Pro 64 GB
+- 4x original Raspberry PI 4 power supplies
+- Micro HDMI Cable
+- Keyboard
+
+Optional:
+- 4x Raspberry PI coolers
+- 4x Raspberry PI cases 
+
+# OS
+Download [Raspberry PI Imager](https://www.raspberrypi.com/software/) on your computer.  
+Install Ubuntu 23.10 on the SD Cards.  
+Assemble the Raspberry PIs and start them up.
+
+## Wireless 
+
+> [!NOTE]
+> This part might already be obsolete, depending on how you configured the installed OS on the micro sd card.   
+Raspberry PI imager lets you configure wifi for the OS even before it is written to the micro sd card.  
+Nevertheless, one might have forgotten to configure the wifi / might want to reconfigure it,   
+which is why this part will be here.
+
+For this configuration you will need to connect your Raspberry PI to a monitor with the micro HDMI cable.  
+You will also need a keyboard attached to the Raspberry PI.
+
+```bash
+# find your wifi adapter name, ex. wlan0
+ls /sys/class/net
+# generate a password from SSID (name of your wifi access point) and your wifi's password 
+wpa_passphrase SSID PASSWORD 
+# get the psk value, you will need it as password in the 50-cloud-init.yaml file
+sudo vi /etc/netplan/50-cloud-init.yaml
+# paste the following value and replace the placeholders
+network:
+    version: 2
+    wifis:
+        renderer: networkd
+        [wifi-adapter-from-/sys/class/net]:
+            access-points:
+                [ssid-name]:
+                    password: [psk-value-from-before]
+            dhcp4: true
+            optional: true
+# :wq
+sudo netplan apply
+```
+Now your Raspberry PI should be connected to your wifi.
+
+# Hostname
+
+
+
 # Flannel
 TODO
 
