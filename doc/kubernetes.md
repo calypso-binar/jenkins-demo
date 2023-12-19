@@ -19,6 +19,35 @@ Download [Raspberry PI Imager](https://www.raspberrypi.com/software/) on your co
 Install Ubuntu 23.10 on the SD Cards.  
 Assemble the Raspberry PIs and start them up.
 
+# First User
+Depending on how you installed the OS on the micro SD, it might already have a user other than root.  
+I usually configure my OS with a preconfigured user "ubuntu".  
+If that's not the case you will be logged in with root at startup.  
+
+You can create a user named ubuntu with the following command:
+```bash
+sudo groupadd --gid 2000 ubuntu
+sudo useradd \
+  --uid 2000 \
+  --gid ubuntu \
+  --no-user-group \
+  --base-dir /home/ubuntu \
+  --home-dir /home/ubuntu \
+  --create-home \
+  --shell bash \
+  --groups sudo
+  ubuntu
+sudo passwd ubuntu # type your password for ubuntu user 
+```
+This will create a user named "ubuntu" with its primary group also named "ubuntu",  
+and the new user will also be able to perform sudo. 
+
+To clean up the user you can run the following command:
+```bash
+sudo userdel ubuntu
+sudo rm -rf /home/ubuntu
+```
+
 ## Wireless 
 
 > [!NOTE]
@@ -55,6 +84,71 @@ Now your Raspberry PI should be connected to your wifi.
 
 # Hostname
 
+> [!NOTE]
+> This part may already be obsolete, since it is possible to set the hostname 
+> through Raspberry PI Imager even before writing the OS to the micro sd.
+> Regardless, one may want to change the hostname even after the OS was booted. 
+
+```bash
+sudo vi /etc/hostname
+# change content with preferred hostname, ex.: raspberry-pi-master, raspberry-pi-worker-1, raspberry-pi-worker-2, etc.
+# :wq
+sudo vi /etc/hosts
+# replace the old hostname with new one (examples above if you need one)
+# hostname must match with the one in /etc/hostname
+
+# check if you have cloud-init installed
+cloud-init status
+# if you have cloud-init installed then it will display something like "status: done"
+# also if cloud-init is installed then you will need to perform the following step:
+sudo vi /etc/cloud/cloud.cfg
+# change `preserve_hostname: false` to `preserve_hostname: true` 
+```
+
+Reboot to verify the hostname sticks.
+
+# SSH Server
+
+To make Raspberry PI secure we will:
+* configure SSH access through SSH key
+* disable SSH login through username / password
+
+## Generate an ssh key-pair
+On your PC generate an ssh key pair by executing the following command:
+```bash
+ssh-keygen
+```
+# TODO
+
+Install openssh-client (might already be installed)  
+```bash
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install openssh-client
+```
+Now you can connect from your PC to raspberry pi:
+```bash
+ssh ubuntu@
+```
+
+# Fixed IP 
+Having a fixed IP will be important later on when the Kubernetes nodes will be communicating with each other.
+Not only that, but it makes it easier to know to which Raspberry PI you are connecting yourself to through SSH.
+You also have the possibility to connect to the Raspberry PI through its hostname which was configured before. 
+
+They will always search for each other under the same IP address.  
+This part is dependent on your router model, which is why you will have to   
+read up on your router model, on how to assign the same IP address 
+to the Raspberry PI's mac-address every time it connects to the router.
+
+My model is a TP-Link Archer AX1500 Wi-Fi 6 Router.  
+The UI can be accessed through http://192.168.1.1/.
+The way I have to configure it is by logging in to the UI, then navigate to:  
+Advanced > Network > DHCP Server  
+Here under "Address Reservation" I have to add the MAC address of the Raspberry PI  
+and the desired IP address, ex. 192.168.1.100.
+
+# Docker
 
 
 # Flannel
