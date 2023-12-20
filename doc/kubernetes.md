@@ -113,23 +113,58 @@ To make Raspberry PI secure we will:
 * configure SSH access through SSH key
 * disable SSH login through username / password
 
-## Generate an ssh key-pair
-On your PC generate an ssh key pair by executing the following command:
-```bash
-ssh-keygen
-```
-# TODO
-
 Install openssh-client (might already be installed)  
 ```bash
 sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install openssh-client
 ```
-Now you can connect from your PC to raspberry pi:
+Remember before when we created the ubuntu user? Now you can connect from your PC to raspberry pi with that user:
 ```bash
-ssh ubuntu@
+ssh ubuntu@raspberry-pi-master
 ```
+or with ip:
+```bash
+ssh ubuntu@192.168.1.100
+```
+
+
+## Generate an ssh key-pair
+On your PC generate an ssh key pair by executing the following command in PowerShell:
+```powershell
+ssh-keygen
+```
+This command will start your ssh key generation process. Initial name and path will be `~/.ssh/id_rsa`.  
+You should rename it to the Raspberry PI-s hostname, so you know which one to use it with,  
+example `$env:USERPROFILE\.ssh\raspberry-pi-master`, `$env:USERPROFILE\.ssh\raspberry-pi-worker-1`, etc.   
+
+The process will also ask you for a password. It is advised to use a password for your ssh keys,  
+even though technically you can leave the password empty. Leaving the password empty will be a security risk though.  
+
+You should generate separate ssh keys for every raspberry pi you have with different passwords.
+
+## Add public key to authorized keys on the Raspberry PI
+Here you will add the public key's content from your PC to the `/home/ubuntu/.ssh/authorized_keys` on the Raspberry PI.
+This can be done either manually by copying the contents of the previously created public key and pasting the content
+into the `/home/ubuntu/.ssh/authorized_keys` file, or by command line. It's your choice.    
+Command line in PowerShell:  
+```powershell
+type $env:USERPROFILE\.ssh\raspberry-pi-5-master.pub | ssh ubuntu@raspberry-pi-5-master "cat >> .ssh/authorized_keys"
+```
+
+## Check SSH connection works
+To log in with your SSH key you can perform the following command in PowerShell:
+```powershell
+ssh -i $env:USERPROFILE\.ssh\raspberry-pi-5-master ubuntu@raspberry-pi-5-master
+```
+This will match the private key against the public key on the Raspberry PI in `/home/ubuntu/.ssh/authorized_keys`.  
+You will also have to supply the password for the SSH key if you generated it with a password.
+If all goes well you will be logged in on the Raspberry PI with the ubuntu user.
+
+# Firewall
+
+TODO ufw
+https://serverastra.com/docs/Tutorials/Setting-Up-and-Securing-SSH-on-Ubuntu-22.04%3A-A-Comprehensive-Guide
 
 # Fixed IP 
 Having a fixed IP will be important later on when the Kubernetes nodes will be communicating with each other.
