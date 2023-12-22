@@ -161,6 +161,16 @@ This will match the private key against the public key on the Raspberry PI in `/
 You will also have to supply the password for the SSH key if you generated it with a password.
 If all goes well you will be logged in on the Raspberry PI with the ubuntu user.
 
+## Disable Username / Password Login
+
+```bash
+sudo vi /etc/ssh/sshd_config
+# add to the end of the file:
+PasswordAuthentication no
+# :wq
+sudo service ssh restart
+```
+
 # Firewall
 
 TODO ufw
@@ -185,6 +195,25 @@ and the desired IP address, ex. 192.168.1.100.
 
 # Docker
 
+Everything was copy-pasted from here: https://docs.docker.com/engine/install/ubuntu/  
+
+```bash
+for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
 
 # Flannel
 TODO
