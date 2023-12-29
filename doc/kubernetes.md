@@ -22,7 +22,7 @@ Assemble the Raspberry PIs and start them up.
 # First User
 Depending on how you installed the OS on the micro SD, it might already have a user other than root.  
 I usually configure my OS with a preconfigured user "ubuntu".  
-If that's not the case you will be logged in with root at startup.  
+If that's not the case, you will be logged in with root at startup.  
 
 You can create a user named ubuntu with the following command:
 ```bash
@@ -42,7 +42,7 @@ sudo passwd ubuntu # type your password for ubuntu user
 This will create a user named "ubuntu" with its primary group also named "ubuntu",  
 and the new user will also be able to perform sudo. 
 
-To clean up the user you can run the following command:
+To clean up the user, you can run the following command:
 ```bash
 sudo userdel ubuntu
 sudo rm -rf /home/ubuntu
@@ -52,17 +52,17 @@ sudo rm -rf /home/ubuntu
 
 > [!NOTE]
 > This part might already be obsolete, depending on how you configured the installed OS on the micro sd card.   
-Raspberry PI imager lets you configure wifi for the OS even before it is written to the micro sd card.  
-Nevertheless, one might have forgotten to configure the wifi / might want to reconfigure it,   
+Raspberry PI imager lets you configure Wi-Fi for the OS even before it is written to the micro sd card.  
+Nevertheless, one might have forgotten to configure the Wi-Fi / might want to reconfigure it,   
 which is why this part will be here.
 
-For this configuration you will need to connect your Raspberry PI to a monitor with the micro HDMI cable.  
+For this configuration, you will need to connect your Raspberry PI to a monitor with the micro HDMI cable.  
 You will also need a keyboard attached to the Raspberry PI.
 
 ```bash
-# find your wifi adapter name, ex. wlan0
+# find your Wi-Fi adapter name, ex. wlan0
 ls /sys/class/net
-# generate a password from SSID (name of your wifi access point) and your wifi's password 
+# generate a password from SSID (name of your Wi-Fi access point) and your Wi-Fi password 
 wpa_passphrase SSID PASSWORD 
 # get the psk value, you will need it as password in the 50-cloud-init.yaml file
 sudo vi /etc/netplan/50-cloud-init.yaml
@@ -80,7 +80,7 @@ network:
 # :wq
 sudo netplan apply
 ```
-Now your Raspberry PI should be connected to your wifi.
+Now your Raspberry PI should be connected to your Wi-Fi.
 
 # Hostname
 
@@ -94,13 +94,13 @@ sudo vi /etc/hostname
 # change content with preferred hostname, ex.: raspberry-pi-master, raspberry-pi-worker-1, raspberry-pi-worker-2, etc.
 # :wq
 sudo vi /etc/hosts
-# replace the old hostname with new one (examples above if you need one)
+# replace the old hostname with new one (some examples above are provided if you need one)
 # hostname must match with the one in /etc/hostname
 
 # check if you have cloud-init installed
 cloud-init status
-# if you have cloud-init installed then it will display something like "status: done"
-# also if cloud-init is installed then you will need to perform the following step:
+# if you have cloud-init installed, then it will display something like "status: done"
+# also if cloud-init is installed, then you will need to perform the following step:
 sudo vi /etc/cloud/cloud.cfg
 # change `preserve_hostname: false` to `preserve_hostname: true` 
 ```
@@ -109,15 +109,15 @@ Reboot to verify the hostname sticks.
 
 # SSH Server
 
-To make Raspberry PI secure we will:
-* configure SSH access through SSH key
+To make Raspberry PI secure, we will:
+* configure SSH access through an SSH key
 * disable SSH login through username / password
 
 Install openssh-client (might already be installed)  
 ```bash
 sudo apt-get update
 sudo apt-get upgrade
-sudo apt-get install openssh-client
+sudo apt-get install openssh-client --yes
 ```
 Remember before when we created the ubuntu user? Now you can connect from your PC to raspberry pi with that user:
 ```bash
@@ -130,8 +130,9 @@ ssh ubuntu@192.168.1.100
 
 
 ## Generate an ssh key-pair
-On your PC generate an ssh key pair by executing the following command in PowerShell:
+On your PC, generate an ssh key pair by executing the following command in PowerShell:
 ```powershell
+cd $env:USERPROFILE\.ssh
 ssh-keygen
 ```
 This command will start your ssh key generation process. Initial name and path will be `~/.ssh/id_rsa`.  
@@ -149,17 +150,17 @@ This can be done either manually by copying the contents of the previously creat
 into the `/home/ubuntu/.ssh/authorized_keys` file, or by command line. It's your choice.    
 Command line in PowerShell:  
 ```powershell
-type $env:USERPROFILE\.ssh\raspberry-pi-5-master.pub | ssh ubuntu@raspberry-pi-5-master "cat >> .ssh/authorized_keys"
+type $env:USERPROFILE\.ssh\raspberry-pi-5-master-1.pub | ssh ubuntu@raspberry-pi-5-master-1 "cat >> .ssh/authorized_keys"
 ```
 
 ## Check SSH connection works
-To log in with your SSH key you can perform the following command in PowerShell:
+To log in with your SSH key, you can perform the following command in PowerShell:
 ```powershell
 ssh -i $env:USERPROFILE\.ssh\raspberry-pi-5-master ubuntu@raspberry-pi-5-master
 ```
 This will match the private key against the public key on the Raspberry PI in `/home/ubuntu/.ssh/authorized_keys`.  
 You will also have to supply the password for the SSH key if you generated it with a password.
-If all goes well you will be logged in on the Raspberry PI with the ubuntu user.
+If all goes well, you will be logged in on the Raspberry PI with the ubuntu user.
 
 ## Disable Username / Password Login
 
@@ -214,36 +215,639 @@ echo \
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
+## add ubuntu user to the docker group
+
+```bash
+sudo usermod -a -G docker ubuntu
+```
+
+# Kubernetes
+
+https://kubernetes.io/docs/setup/production-environment/container-runtimes/  
+
+## OS Configuration
+
+```bash
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+# sysctl params required by setup, params persist across reboots
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+# Apply sysctl params without a reboot
+sudo sysctl --system
+# Verify that the br_netfilter, overlay modules are loaded by running the following commands:
+lsmod | grep br_netfilter
+lsmod | grep overlay
+# Verify that the net.bridge.bridge-nf-call-iptables, net.bridge.bridge-nf-call-ip6tables, and net.ipv4.ip_forward system variables are set to 1 in your sysctl config by running the following command:
+sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
+```
+
+```bash
+# Configure containerd so that it starts using systemd as cgroup, and disabled_plugins is empty.
+containerd config default | sudo tee /etc/containerd/config.toml >/dev/null 2>&1
+sudo sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
+
+sudo systemctl restart containerd
+```
+
+## Installation
+```bash
+sudo apt-get update
+# apt-transport-https may be a dummy package; if so, you can skip that package
+sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+# This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+```
+
+Reconfigure crictl endpoint to use containerd runtime instead of dockershim:
+```bash
+sudo crictl config --set runtime-endpoint=unix:///var/run/containerd/containerd.sock --set image-endpoint=unix:///var/run/containerd/containerd.sock
+```
+
+## Control Plane Initialization
+```bash
+sudo kubeadm init --pod-network-cidr 10.244.0.0/16 #pod network cidr is important for flannel later
+# Output should be something like:
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 192.168.1.100:6443 --token 86h57g.2cm8b0u9dc49ao8a \
+        --discovery-token-ca-cert-hash sha256:757a340b5de4e10aff15424d34b75aed5ea794c346b22db612e961ba60409b53
+
+```
+
+## Highly Available Control Plane (Optional)
+
+### Theory
+> [!INFO]
+> This part is optional. 
+> In this doc we will be only using a single control plane since we concentrate on 4 Raspberry PIs.
+> If you want highly available control planes you will need more than 4 Raspberry PIs.
+>
+**In theory,** to achieve the best scalability, the least resource utilisation, security and availability,  
+the Kubernetes cluster **must have at least three control planes**, where:
+* control plane and etcd server should reside on their own separate nodes
+* the load balancer should be on its own separate node
+  * load balancer should also be highly available
+
+Why three?  
+Because Kubernetes will not work with only two control planes. It is as good as having only one.  
+The following table illustrates how many control planes are necessary to tolerate failure:
+
+| Cluster Size | Majority | Failure Tolerance |
+|--------------|----------|-------------------|
+| 1            | 1        | 0                 |
+| 2            | 2        | 0                 |
+| 3            | 2        | 1                 |
+| 4            | 3        | 1                 |
+| 5            | 3        | 2                 |
+| 6            | 4        | 2                 |
+| 7            | 4        | 3                 |
+
+#### Option 1: External etcd Cluster
+
+```
+          ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐    
+          │ Worker Node │ │ Worker Node │ │ Worker Node │ │ Worker Node │ │ Worker Node │  
+          └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘    
+                 │               │               ↓               │               │
+                 │               └──>┌────────────────────────┐<─┘               │
+                 └──────────────────>│ Load Balancer (master) │<─────────────────┘
+                                     └──┬─────────┬────────┬──┘
+                                        │         │        │ ↑     ┌─────────────────────────┐  
+                                        │         │        │ └─────│ Load Balancer (Standby) │  
+                                        │         │        │       └─────────────────────────┘
+                 ┌──────────────────────┘         │        └─────────────────────┐                   
+    ┌────────────│──────────────┐   ┌─────────────│─────────────┐   ┌────────────│──────────────┐
+    │     Control│Plane Node    │   │      Control│Plane Node   │   │     Control│Plane Node    │
+    │   ┌────────┴───────────┐  │   │   ┌─────────┴──────────┐  │   │   ┌────────┴───────────┐  │
+    │ ┌─┤     Api Server     │  │   │ ┌─┤     Api Server     │  │   │ ┌─┤     Api Server     │  │
+    │ │ └────────────────────┘  │   │ │ └────────────────────┘  │   │ │ └────────────────────┘  │
+    │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │
+    │ │ │ Controller Manager │  │   │ │ │ Controller Manager │  │   │ │ │ Controller Manager │  │
+    │ │ └────────────────────┘  │   │ │ └────────────────────┘  │   │ │ └────────────────────┘  │
+    │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │
+    │ │ │     Scheduler      │  │   │ │ │     Scheduler      │  │   │ │ │     Scheduler      │  │
+    │ │ └────────────────────┘  │   │ │ └────────────────────┘  │   │ │ └────────────────────┘  │
+    └─│─────────────────────────┘   └─│─────────────────────────┘   └─│─────────────────────────┘ 
+    ┌─│───────────────────────────────│───────────────────────────────│─────────────────────────┐  
+    │ │  external etcd cluster        │                               │                         │
+    │ │ ┌────────────────────┐        │ ┌────────────────────┐        │ ┌────────────────────┐  │
+    │ └>│     etcd host      │        └>│     etcd host      │        └>│     etcd host      │  │
+    │   └────────────────────┘          └────────────────────┘          └────────────────────┘  │
+    └───────────────────────────────────────────────────────────────────────────────────────────┘
+```
+#### Option 2: Stacked etcd Topology
+There is also the possibility to put the etcd host on the control plane directly (stacked etcd topology).  
+Drawback is that if one of the control plane dies, it takes the etcd host with it, compromising redundancy.  
+You can mitigate this risk by using a minimal of three control-planes. 
+```
+          ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐    
+          │ Worker Node │ │ Worker Node │ │ Worker Node │ │ Worker Node │ │ Worker Node │  
+          └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘    
+                 │               │               ↓               │               │
+                 │               └──>┌────────────────────────┐<─┘               │
+                 └──────────────────>│ Load Balancer (master) │<─────────────────┘
+                                     └──┬─────────┬────────┬──┘
+                                        │         │        │ ↑     ┌─────────────────────────┐  
+                                        │         │        │ └─────│ Load Balancer (Standby) │  
+                                        │         │        │       └─────────────────────────┘
+                 ┌──────────────────────┘         │        └─────────────────────┐                   
+    ┌────────────│──────────────┐   ┌─────────────│─────────────┐   ┌────────────│──────────────┐
+    │     Control│Plane Node    │   │      Control│Plane Node   │   │     Control│Plane Node    │
+    │   ┌────────┴───────────┐  │   │   ┌─────────┴──────────┐  │   │   ┌────────┴───────────┐  │
+    │ ┌─┤     Api Server     │  │   │ ┌─┤     Api Server     │  │   │ ┌─┤     Api Server     │  │
+    │ │ └────────────────────┘  │   │ │ └────────────────────┘  │   │ │ └────────────────────┘  │
+    │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │
+    │ │ │ Controller Manager │  │   │ │ │ Controller Manager │  │   │ │ │ Controller Manager │  │
+    │ │ └────────────────────┘  │   │ │ └────────────────────┘  │   │ │ └────────────────────┘  │
+    │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │
+    │ │ │     Scheduler      │  │   │ │ │     Scheduler      │  │   │ │ │     Scheduler      │  │
+    │ │ └────────────────────┘  │   │ │ └────────────────────┘  │   │ │ └────────────────────┘  │  
+    │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │   │ │ ┌────────────────────┐  │
+    │ └>│     etcd host      │  │   │ └>│     etcd host      │  │   │ └>│     etcd host      │  │
+    │   └────────────────────┘  │   │   └────────────────────┘  │   │   └────────────────────┘  │
+    └───────────────────────────┘   └───────────────────────────┘   └───────────────────────────┘   
+```
+
+> [!INFO]
+> There are multiple other options where you can combine different setups, 
+> but these two are the recommended ones by Kubernetes. 
+
+##### Option 3: Stacked etcd Topology with keepalived and haproxy in the Control Plane Cluster as Static Pods
+
+Install keepalived and haproxy:
+```bash
+apt-get update
+apt-get upgrade 
+sudo apt-get install keepalived haproxy --yes
+# The next part is necessary, since we want haproxy and keepalived to run on the control-planes, not in the OS.
+# You can run the haproxy, keepalived in the OS too if you want. 
+# In that case, skip the disabling, and skip the static pod manifests.
+systemctl disable haproxy --now
+systemctl disable keepalived --now
+```
+
+Configure keepalived:
+```bash
+vi /etc/keepalived/keepalived.conf
+
+global_defs {
+    router_id LVS_DEVEL
+}
+vrrp_script check_apiserver {
+  script "/etc/keepalived/check_apiserver.sh"
+  interval 3
+  weight -2
+  fall 10
+  rise 2
+}
+
+vrrp_instance VI_1 {
+    state ${STATE}
+    interface ${INTERFACE}
+    virtual_router_id ${ROUTER_ID}
+    priority ${PRIORITY}
+    authentication {
+        auth_type PASS
+        auth_pass ${AUTH_PASS}
+    }
+    virtual_ipaddress {
+        ${APISERVER_VIP}
+    }
+    track_script {
+        check_apiserver
+    }
+}
+# ${STATE} is MASTER for one and BACKUP for all other hosts, hence the virtual IP will initially be assigned to the MASTER.
+# ${INTERFACE} is the network interface taking part in the negotiation of the virtual IP, e.g. eth0.
+# ${ROUTER_ID} should be the same for all keepalived cluster hosts while unique amongst all clusters in the same subnet. 
+# Many distros pre-configure its value to 51.
+# ${PRIORITY} should be higher on the control plane node than on the backups. Hence 101 and 100 respectively will suffice.
+# ${AUTH_PASS} should be the same for all keepalived cluster hosts, e.g. 42
+# ${APISERVER_VIP} is the virtual IP address negotiated between the keepalived cluster hosts.# 
+# :wq
+```
+```bash
+# create the shell script for the keepalived config:
+mkdir -p /usr/local/etc/keepalived/
+vi /etc/keepalived/check_apiserver.sh
+#!/bin/sh
+
+errorExit() {
+    echo "*** $*" 1>&2
+    exit 1
+}
+
+APISERVER_DEST_PORT='6443'
+APISERVER_VIP='192.168.1.150'
+
+curl --silent --max-time 2 --insecure https://localhost:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://localhost:${APISERVER_DEST_PORT}/"
+if ip addr | grep -q ${APISERVER_VIP}; then
+    curl --silent --max-time 2 --insecure https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/"
+fi
+# :wq
+chmod +x /etc/keepalived/check_apiserver.sh
+```
+
+Configure haproxy:
+```bash
+vi /etc/haproxy/haproxy.cfg
+# /etc/haproxy/haproxy.cfg
+#---------------------------------------------------------------------
+# Global settings
+#---------------------------------------------------------------------
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    daemon
+
+#---------------------------------------------------------------------
+# common defaults that all the 'listen' and 'backend' sections will
+# use if not designated in their block
+#---------------------------------------------------------------------
+defaults
+    mode                    http
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option http-server-close
+    option forwardfor       except 127.0.0.0/8
+    option                  redispatch
+    retries                 1
+    timeout http-request    10s
+    timeout queue           20s
+    timeout connect         5s
+    timeout client          20s
+    timeout server          20s
+    timeout http-keep-alive 10s
+    timeout check           10s
+
+#---------------------------------------------------------------------
+# apiserver frontend which proxys to the control plane nodes
+#---------------------------------------------------------------------
+frontend apiserver
+    bind *:${APISERVER_DEST_PORT}
+    mode tcp
+    option tcplog
+    default_backend apiserverbackend
+
+#---------------------------------------------------------------------
+# round robin balancing for apiserver
+#---------------------------------------------------------------------
+backend apiserverbackend
+    option httpchk GET /healthz
+    http-check expect status 200
+    mode tcp
+    option ssl-hello-chk
+    balance     roundrobin
+        server ${HOST1_ID} ${HOST1_ADDRESS}:${APISERVER_SRC_PORT}check inter 1s
+        # [...]
+
+# Placeholders to expand:  
+# ${APISERVER_DEST_PORT} the port through which Kubernetes will talk to the API Server. example: 6443
+# ${APISERVER_SRC_PORT} the port used by the API Server instances example: 6443
+# ${HOST1_ID} a symbolic name for the first load-balanced API Server host  example: raspberry-pi-5-master-1
+# ${HOST1_ADDRESS} a resolvable address (DNS name, IP address) for the first load-balanced API Server host. example: 192.168.1.100
+additional server lines, one for each load-balanced API Server host
+```
+
+Create the static pod manifest for keepalived:
+```bash
+vi /etc/kubernetes/manifests/keepalived.yaml
+# paste the following content:
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  name: keepalived
+  namespace: kube-system
+spec:
+  containers:
+  - image: angelnu/keepalived
+    name: keepalived
+    resources:
+      limits:
+        cpu: "100m"      # max 1 CPU
+        memory: "1Gi" # max 1GiB of RAM
+      requests:
+        cpu: "100m"  # request 0.5 CPU
+        memory: "500Mi" # request 0.5GiB of RAM
+    securityContext:
+      capabilities:
+        add:
+        - NET_ADMIN
+        - NET_BROADCAST
+        - NET_RAW
+    volumeMounts:
+    - mountPath: /etc/keepalived/keepalived.conf
+      name: config
+    - mountPath: /etc/keepalived/check_apiserver.sh
+      name: check
+  hostNetwork: true
+  volumes:
+  - hostPath:
+      path: /etc/keepalived/keepalived.conf
+    name: config
+  - hostPath:
+      path: /etc/keepalived/check_apiserver.sh
+    name: check
+status: {}
+# :wq
+```
+Create the static pod manifest for haproxy:
+```bash
+vi /etc/kubernetes/manifests/haproxy.yaml
+# paste the following content:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: haproxy
+  namespace: kube-system
+spec:
+  containers:
+  - image: haproxy:2.9.1
+    name: haproxy
+    resources:
+      limits:
+        cpu: "100m"
+        memory: "1Gi" # max 1GiB of RAM
+      requests:
+        cpu: "100m"
+        memory: "500Mi" # request 0.5GiB of RAM
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: localhost
+        path: /healthz
+        port: 8443
+        scheme: HTTPS
+    volumeMounts:
+    - mountPath: /usr/local/etc/haproxy/haproxy.cfg
+      name: haproxyconf
+      readOnly: true
+  hostNetwork: true
+  volumes:
+  - hostPath:
+      path: /etc/haproxy/haproxy.cfg
+      type: FileOrCreate
+    name: haproxyconf
+status: {}
+# placeholder needs to be filled in: ${APISERVER_DEST_PORT}
+# :wq
+```
+
+Init the control planes:
+```bash
+sudo kubeadm init --control-plane-endpoint "192.168.1.150:6443" --upload-certs --pod-network-cidr 10.244.0.0/16
+```
+
+Join the other control planes:
+```bash
+# it can happen that the main control-plane already deleted the certificates. They are available only 2 hours.
+# In this case, execute the command on the main control-plane, which will print the certificate-key:
+sudo kubeadm init phase upload-certs --upload-certs
+# still on the main control-plane get a join command. get the token and the ca-cert-hash:
+kubeadm token create --print-join-command
+# on the secondary control planes:
+kubeadm join 192.168.1.150:6443 --token [token] --discovery-token-ca-cert-hash [ca-cert-hash] --control-plane --certificate-key [certificate-key]
+```
+
+> [!NOTE]
+> There is another way to configure HA control plane with kube-vip, but as of now arp mode seems to be bugged.
+
+## Copy admin config
+
+There is one kubeconfig file at creation time.
+That one kubeconfig file can do anything in Kubernetes.  
+For restricted connections, look further down where users are created.
+To enable access for the ubuntu user we'll copy the admin config to ubuntu's home directory:
+```bash
+mkdir -p /home/ubuntu/.kube
+sudo cp /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
+sudo chown ubuntu:ubuntu /home/ubuntu/.kube/config
+```
+
+# Creating Users for Kubernetes
+
+In this section, a demonstration will be made how to create a user john 
+and give it rights to create, list and get pods from the default namespace.  
+For more information, consult the 
+[Authorization Overview](https://kubernetes.io/docs/reference/access-authn-authz/authorization/) documentation.
+
+This task consists of the following:
+* Generate certificates for the user. 
+* Create a certificate signing request (CSR). 
+* Sign the certificate using the cluster certificate authority. 
+* Create a configuration specific to the user. 
+* Add RBAC rules for the user or their group.
+
+For the sake of simplicity, a user named John will be created.
+
+```bash
+# generate the private key:
+openssl genpkey -out john.key -algorithm Ed25519
+# generate the certificate signing request, like common name (CN) and organization (O) 
+openssl req -new -key john.key -out john.csr -subj "/CN=john,/O=acmeorg"
+cat john.csr | base64 | tr -d "\n"
+# Content will be something like:
+# LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlHaE1GVUNBUUF3SWpFT01Bd0dBMVVFQXd3RmFtOW(...)
+```
+Now copy the CertificateSigningRequest for Kubernetes:  
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: john
+spec:
+  request: <PASTE BASE64 CONTENT FROM BEFORE HERE>
+  signerName: kubernetes.io/kube-apiserver-client
+  expirationSeconds: 86400 # one day. increase as needed
+  usages:
+  - client auth
+EOF
+```
+
+Now approve the certificate:
+```bash
+kubectl certificate approve john
+```
+
+Double-check the status of John's certificate status:
+```bash
+kubectl describe certificatesigningrequest/john 
+```
+Next, we will create a configuration specific to John:
+```bash
+kubectl get csr/john -o jsonpath="{.status.certificate}" | base64 -d > john.crt
+```
+
+Extract the certificate from a CertificateSigningRequest (CSR) named “john” using kubectl and jsonpath:
+```bash
+kubectl --kubeconfig john-kube-config config set-credentials john --client-key john.key --client-certificate john.csr --embed-certs=true
+# output:
+# User "john" set.
+```
+
+Now to configure the kubeconfig file:
+```bash
+# first get the name of the cluster:
+kubectl config get-clusters
+# Output:
+# kubernetes
+# Step 1: Set the cluster
+kubectl --kubeconfig john-kube-config config set-cluster kubernetes \
+  --embed-certs=true \
+  --server=https://192.168.1.150:6443 \
+  --certificate-authority=/etc/kubernetes/pki/ca.crt
+
+# Step 2: Set the credentials
+kubectl --kubeconfig john-kube-config config set-credentials john \
+  --client-key=john.key \
+  --client-certificate=john.csr \
+  --embed-certs=true
+
+# Step 3: Set the context
+kubectl --kubeconfig john-kube-config config set-context kubernetes \
+  --cluster=kubernetes \
+  --user=john
+
+# Step 4: Use the context
+kubectl --kubeconfig john-kube-config config use-context kubernetes
+```
+
+Time to create a Role for John in the default namespace:
+```bash
+kubectl create clusterrole pod-manager --verb=create,list,get --resource=pods --namespace=default
+```
+
+Now bind the newly created role to John:
+```bash
+kubectl create clusterrolebinding john-pod-manager --clusterrole=pod-manager --user=john
+# Output:
+# clusterrolebinding.rbac.authorization.k8s.io/john-pod-manager created
+```
+
+You can verify what you can do with the role through the can-i statement:
+```bash
+kubectl auth can-i create deployments --namespace=default --as=john
+# no 
+
+kubectl auth can-i create secrets --namespace=default --as=john
+# no
+
+kubectl auth can-i get pods --namespace=default --as=john
+# yes
+```
+
+With this done, John is able to create, list and get pods in the default namespace.
 
 # Flannel
-TODO
+https://github.com/flannel-io/flannel#deploying-flannel-manually
+
+```bash
+# Needs manual creation of namespace to avoid helm error
+kubectl create ns kube-flannel
+kubectl label --overwrite ns kube-flannel pod-security.kubernetes.io/enforce=privileged
+
+helm repo add flannel https://flannel-io.github.io/flannel/
+helm repo update
+helm  upgrade --install flannel --set podCidr="10.244.0.0/16" --namespace kube-flannel flannel/flannel
+```
 
 # Metallb
-TODO
+https://metallb.universe.tf/installation/  
+Needs joined worker nodes.  
+
+Create a `metallb-config.yaml` file:
+```yaml
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: metallb-nginx-ingress-ip-addr-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - ${IP_ADDRESS}/32
+  autoAssign: true
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: metallb-nginx-ingress-advertisement
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - metallb-nginx-ingress
+  interfaces:
+  - wlan0
+```
+Replace IP_ADDRESS with the control plane-s ip address.
+
+```bash
+helm repo add metallb https://metallb.github.io/metallb
+helm repo update
+helm upgrade --install metallb --namespace metallb-system --create-namespace metallb/metallb
+```
+
+Once all of the metallb pods are up configure metallb with the `metallb-config.yaml`:
+```bash
+kubectl apply -f metallb-config.yaml
+```
 
 # nfs-subdir-external-provisioner
 TODO
 
 # Ingress-Nginx
 
+Get yourself a signed certificate from your paid domain name. You will also need the private key.
+
 ```bash
 # if you have an SSL Certificate and Key
 kubectl create namespace ingress-nginx
 kubectl create secret tls no-ip-ssl-cert --key calypso-binar.key --cert calypso-binar_com.pem -n ingress-nginx
-kubectl -n ingress-nginx create secret generic no-ip-ssl-cert --from-file=./calypso-binar_com.pem
+# kubectl -n ingress-nginx create secret generic no-ip-ssl-cert --from-file=./calypso-binar_com.pem
 ```
 
 ```bash
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo update
 # use controller.extraArgs.default-ssl-certificate only if you have a certificate installed on Kubernetes as a secret.
-# otherwise Kubernetes will provide a self-signed certificate
+# otherwise, Kubernetes will provide a self-signed certificate
 helm upgrade --install --force ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace \
 --set controller.extraArgs.default-ssl-certificate="ingress-nginx/no-ip-ssl-cert"
 ```
-
-# Metallb 
-TODO
 
 # NFS with NAS (Network Attached Storage) with USB
 Mount an USB Stick (or external SSD) to `/media/usb`  
