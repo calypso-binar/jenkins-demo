@@ -818,15 +818,27 @@ Replace IP_ADDRESS with the control plane-s ip address.
 ```bash
 helm repo add metallb https://metallb.github.io/metallb
 helm repo update
-helm upgrade --install metallb --namespace metallb-system --create-namespace metallb/metallb
+helm upgrade --install metallb --namespace metallb-system --create-namespace metallb/metallb -v
 ```
 
 Once all of the metallb pods are up configure metallb with the `metallb-config.yaml`:
 ```bash
-kubectl apply -f metallb-config.yaml
+kubectl apply  -n metallb-system -f metallb-config.yaml
+```
+
+Now if you already have an ingress-nginx installed it should get an external-ip.  
+You can check by running the following command:
+```bash
+kubectl get services -n ingress-nginx
+# output should be something like below:
+NAME                                 TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)                      AGE
+ingress-nginx-controller             LoadBalancer   10.107.125.102   192.168.1.140   80:32599/TCP,443:31875/TCP   9m23s
+ingress-nginx-controller-admission   ClusterIP      10.106.61.254    <none>          443/TCP                      9m22s
 ```
 
 # Ingress-Nginx
+
+## With SSL key and cert-chain
 
 Get yourself a signed certificate from your paid domain name. You will also need the private key.
 
@@ -845,6 +857,100 @@ helm repo update
 helm upgrade --install --force ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace \
 --set controller.extraArgs.default-ssl-certificate="ingress-nginx/no-ip-ssl-cert"
 ```
+
+## With cert-manager and let's encrypt certificate
+
+For this to work you will need to install cert-manager on Kubernetes:  
+https://cert-manager.io/docs/installation/helm/
+
+create a `issuer-lets-encrypt-production.yaml`:
+```yaml
+# issuer-lets-encrypt-production.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-production
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: <email-address> # ❗ Replace this with your email address
+    privateKeySecretRef:
+      name: letsencrypt-production
+    solvers:
+    - http01:
+        ingress:
+          name: web-ingress
+```
+
+```bash
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+helm upgrade --install --force cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --set installCRDs=true
+kubectl apply -f issuer-lets-encrypt-production.yaml
+```
+
+Configure cert-manager by creating an issuer custom resource:
+
+issuer-lets-encrypt-production.yaml  
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-production
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: <YOUR E-MAIL HERE!!!>
+    privateKeySecretRef:
+      name: letsencrypt-production
+    solvers:
+    - http01:
+        ingress:
+          ingressClassName: nginx
+```
+
+```bash
+kubectl apply -f issuer-lets-encrypt-production.yaml
+```
+
+You will install ingress-nginx as you usually would:  
+
+```bash
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm upgrade --install --force ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx
+```
+
+Now, for the interesting part. When creating an ingress, you will have to annotate it with the cert-manager cluster-issuer annotation.  
+You will also point to the letsencrypt secret, which contains the tls certificate.
+Example:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-app
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  tls:
+    - hosts:
+      - calypso-binar.com
+      secretName: letsencrypt-production
+  ingressClassName: nginx
+  rules:
+  - host: calypso-binar.com
+    http:
+      paths:
+      - path: /hello
+        pathType: Prefix
+        backend:
+          service:
+            name: web-app
+            port:
+              number: 80
+```
+
 
 # NFS with NAS (Network Attached Storage) with USB
 TODO: highly available NAS
