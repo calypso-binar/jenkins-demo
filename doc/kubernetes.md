@@ -826,9 +826,6 @@ Once all of the metallb pods are up configure metallb with the `metallb-config.y
 kubectl apply -f metallb-config.yaml
 ```
 
-# nfs-subdir-external-provisioner
-TODO
-
 # Ingress-Nginx
 
 Get yourself a signed certificate from your paid domain name. You will also need the private key.
@@ -850,17 +847,81 @@ helm upgrade --install --force ingress-nginx ingress-nginx/ingress-nginx -n ingr
 ```
 
 # NFS with NAS (Network Attached Storage) with USB
-Mount an USB Stick (or external SSD) to `/media/usb`  
-example with vfat file system usb stick:  
+TODO: highly available NAS
+First we will mount a USB Stick (or external SSD) to `/media/usb`.
+On one of the kubernetes nodes (you decide which0) put a USB stick / externall SSD into a USB.  
+To find out which device the USB is written:
+```bash
+lsblk
+# output will be something like:
+AME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+loop0         7:0    0  49.1M  1 loop /snap/core18/2810
+loop1         7:1    0  69.1M  1 loop /snap/core22/1035
+loop2         7:2    0  68.5M  1 loop /snap/core22/867
+loop3         7:3    0   9.6M  1 loop /snap/helm/374
+loop4         7:4    0   169M  1 loop /snap/lxd/25953
+loop5         7:5    0 134.8M  1 loop /snap/lxd/26202
+loop6         7:6    0  35.5M  1 loop /snap/snapd/20298
+sda           8:0    0 465.8G  0 disk
+└─sda1        8:1    0 465.8G  0 part
+mmcblk0     179:0    0  59.5G  0 disk
+├─mmcblk0p1 179:1    0   512M  0 part /boot/firmware
+└─mmcblk0p2 179:2    0    59G  0 part /
 ```
-sudo mount -t vfat /dev/sda1 /media/usb -o uid=1000,gid=1000,utf8,dmask=027,fmask=137
+In this case, the sda1 is the USB device. It has ~465 GB, therefore it is my external SSD.
+
+Now we will mount the USB device, example with vfat file system:  
+```bash
+systemctl stop nfs-server
+fdisk /dev/sda1
+# follow instructions here: https://www.redips.net/linux/create-fat32-usb-drive/
+p # prints device info
+d # deletes partition
+n # new partition
+# leave everything on default, except Y for remove signature 
+t # set partition type
+83 # alias for Linux
+
+sudo mkfs.ext4 /dev/sda1
+sudo mkdir -p /media/usb
+lsblk -o NAME,FSTYPE,UUID
+
+NAME        FSTYPE UUID
+loop0
+loop1
+loop2
+loop3
+loop4
+loop5
+loop6
+sda
+└─sda1      ext4   b6462122-3fa4-4cc6-8f04-36463b82dcf5
+mmcblk0
+├─mmcblk0p1 vfat   81C9-1C52
+└─mmcblk0p2 ext4   d78ea5c7-a075-476e-acdd-a16cc2187931
+
+vi /etc/fstab
+# TABs are important
+UUID=47C8-238F  /media/usb      vfat    defaults        0       0
+
+# sudo mount -t vfat /dev/sda1 /media/usb -o uid=1000,gid=1000,utf8,dmask=027,fmask=137
 ```
 
+Now you can write to /media/usb whatever you want. 
+
+## nfs-kernel-server
+This piece of software will be able to serve directories as network attached storage (NAS).  
+In our case, the mounted usb device will be our NAS.
 
 https://ubuntu.com/server/docs/service-nfs
 Install nfs-kernel-server on a machine.
-Export the /media/usb to /etc/exports on an IP range allowed to access it:
+```bash
+sudo apt install nfs-kernel-server network-manager --yes
 ```
+Export the /media/usb to /etc/exports on an IP range allowed to access it:
+```bash
+vi /etc/exports
+# paste at the end the following:
 /media/usb 192.168.1.0/24(rw,sync,no_root_squash,no_subtree_check)
 ```
 
@@ -869,27 +930,43 @@ restart the nfs server:
 systemctl restart nfs-kernel-server
 ```
 
-If you want to access the files then install nfs-common:
-sudo apt-get install nfs-common
-Mount the USB form the nfs:
+## nfs-common
+We want to access this USB on the worker nodes. Therefore, we will install nfs-common on all of them.
+```bash
+sudo apt-get install nfs-common network-manager --yes
+sudo mkdir -p /media/usb
+# Mount the USB form the nfs manually:
+sudo mount -t nfs 192.168.1.100:/media/usb /media/usb
+192.168.1.100:/media/usb    /media/usb   nfs defaults 0 0
 ```
-mkdir -p /media/usb
-mount -t nfs 192.168.1.200:/media/usb /media/usb
-```
+
+Note: the IP address is the host IP of the usb device.
 
 # Use NFS in Kubernetes
 https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner/tree/master
 
+```bash
+helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+helm repo update
 helm upgrade --install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
  --namespace nfs --create-namespace \
- --set nfs.server=192.168.1.200 \
+ --set nfs.server=192.168.1.100 \
  --set nfs.path=/media/usb \
  --set storageClass.defaultClass=true \
  --set storageClass.accessModes=ReadWriteMany
+```
 
- # Monitoring
+This will enable you to use a storage class named `nfs-client` in Kubernetes. To verify:
+```bash
+kubectl get storageclasses
+# output:
+NAME                   PROVISIONER                                     RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+nfs-client (default)   cluster.local/nfs-subdir-external-provisioner   Delete          Immediate           true                   78s
+```
 
-create a values.yaml file:
+# Monitoring
+
+create a `kube-prometheus-stack-values.yaml` file:
 ```yaml
 grafana:
   persistence:
@@ -908,7 +985,6 @@ grafana:
   grafana.ini:
     server:
       root_url: https://calypso-binar.com/grafana # this host can be localhost
-      datasources:
     datasources.yaml:
       apiVersion: 1
       datasources:
@@ -1006,7 +1082,7 @@ prometheus-node-exporter:
 ```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts  
 helm repo update  
-helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-stack prometheus-community/kube-prometheus-stack -f values.yaml
+helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-stack prometheus-community/kube-prometheus-stack -f kube-prometheus-stack-values.yaml
 ```
 
 # Tracing
@@ -1014,18 +1090,19 @@ helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-
 ## Loki-Stack
 https://github.com/grafana/helm-charts/tree/main/charts/loki-stack
 
+loki-stack-values.yaml:
+```yaml
+loki:
+  config:
+    auth_enabled: false
+```
+
 ```bash
 helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
 helm upgrade --install --force -n monitoring --create-namespace loki-stack grafana/loki-stack -f loki-stack-values.yaml
 ```
 
-loki-stack-values.yaml:  
-```yaml
-loki:
-  config:
-    auth_enabled: false
-```
 
 # MariaDB
 https://www.datree.io/helm-chart/mariadb-bitnami
@@ -1042,5 +1119,186 @@ auth:
   rootPassword: "YOUR PW HERE"
 ```
 
-# cert-manager
-TODO
+# Jenkins
+
+## Master
+
+https://github.com/jenkinsci/helm-charts
+https://github.com/jenkinsci/helm-charts/blob/main/charts/jenkins/values.yaml  
+https://github.com/CenterForOpenScience/helm-charts/blob/master/jenkins/README.md
+https://github.com/jenkinsci/configuration-as-code-plugin/blob/master/README.md#introduction
+
+jenkins-values.yaml (it's a long one...):
+
+```yaml
+persistence:
+  enabled: true
+  storageClass: nfs-client
+  size: 10Gi
+controller:
+  jenkinsUriPrefix: "/jenkins"
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    path: "/jenkins"
+    hostName: calypso-binar.com
+  JCasC:
+    defaultConfig: false
+    configScripts:
+      jenkinscasc: |
+        jenkins:
+          agentProtocols:
+            - "JNLP4-connect"
+            - "Ping"
+          authorizationStrategy:
+            loggedInUsersCanDoAnything:
+              allowAnonymousRead: false
+          clouds:
+            - kubernetes:
+                containerCap: 10
+                containerCapStr: "10"
+                jenkinsTunnel: "jenkins-agent.default.svc.cluster.local:50000"
+                jenkinsUrl: "http://jenkins.default.svc.cluster.local:8080/jenkins"
+                name: "kubernetes"
+                namespace: "default"
+                podLabels:
+                  - key: "jenkins/jenkins-jenkins-agent"
+                    value: "true"
+                serverUrl: "https://kubernetes.default"
+                templates:
+                  - containers:
+                      - args: "^${computer.jnlpmac} ^${computer.name}"
+                        envVars:
+                          - envVar:
+                              key: "JENKINS_URL"
+                              value: "http://jenkins.default.svc.cluster.local:8080/jenkins"
+                        image: "fractalwoodstories/jenkins-inbound-agent:latest"
+                        name: "jnlp"
+                        resourceLimitCpu: "4096m"
+                        resourceLimitMemory: "4096Mi"
+                        resourceRequestCpu: "2048m"
+                        resourceRequestMemory: "2048Mi"
+                        workingDir: "/home/jenkins/agent"
+                    id: "923e6d6b3128baaa56764f4b69d4c62b61e55d00f8170e3428f011148767dc99"
+                    label: "jenkins-jenkins-agent"
+                    name: "default"
+                    namespace: "default"
+                    nodeUsageMode: NORMAL
+                    podRetention: "never"
+                    serviceAccount: "default"
+                    slaveConnectTimeout: 100
+                    slaveConnectTimeoutStr: "100"
+                    volumes:
+                    - nfsVolume:
+                        mountPath: "/home/jenkins/.m2"
+                        readOnly: false
+                        serverAddress: "192.168.1.100"
+                        serverPath: "/media/usb/.m2"
+                    - hostPathVolume:
+                        hostPath: "/var/run/docker.sock"
+                        mountPath: "/var/run/docker.sock"
+                        readOnly: false
+                    yamlMergeStrategy: "override"
+          crumbIssuer:
+            standard:
+              excludeClientIPFromCrumb: true
+          disableRememberMe: false
+          labelAtoms:
+            - name: "built-in"
+            - name: "jenkins-jenkins-agent"
+          markupFormatter: "plainText"
+          mode: NORMAL
+          myViewsTabBar: "standard"
+          numExecutors: 0
+          primaryView:
+            all:
+              name: "all"
+          projectNamingStrategy: "standard"
+          quietPeriod: 5
+          remotingSecurity:
+            enabled: true
+          scmCheckoutRetryCount: 0
+          securityRealm:
+            local:
+              allowsSignup: false
+              enableCaptcha: false
+              users:
+                - id: "${chart-admin-username}"
+                  password: "${chart-admin-password}"
+                  name: "Jenkins Admin"
+                  properties:
+                    - "apiToken"
+                    - "mailer"
+                    - "myView"
+                    - preferredProvider:
+                        providerId: "default"
+                    - "timezone"
+                    - "experimentalFlags"
+          slaveAgentPort: 50000
+          updateCenter:
+            sites:
+              - id: "default"
+                url: "https://updates.jenkins.io/update-center.json"
+          views:
+            - all:
+                name: "all"
+          viewsTabBar: "standard"
+        globalCredentialsConfiguration:
+          configuration:
+            providerFilter: "none"
+            typeFilter: "none"
+        security:
+          apiToken:
+            creationOfLegacyTokenEnabled: false
+            tokenGenerationOnCreationEnabled: false
+            usageStatisticsEnabled: true
+          gitHooks:
+            allowedOnAgents: false
+            allowedOnController: false
+          gitHostKeyVerificationConfiguration:
+            sshHostKeyVerificationStrategy: "knownHostsFileVerificationStrategy"
+        unclassified:
+          buildDiscarders:
+            configuredBuildDiscarders:
+              - "jobBuildDiscarder"
+          fingerprints:
+            fingerprintCleanupDisabled: false
+            storage: "file"
+          location:
+            adminAddress: "address not configured yet <nobody@nowhere>"
+            url: "http://calypso-binar.com/jenkins/"
+          mailer:
+            charset: "UTF-8"
+            useSsl: false
+            useTls: false
+          pollSCM:
+            pollingThreadCount: 10
+          scmGit:
+            addGitTagAction: false
+            allowSecondFetch: false
+            createAccountBasedOnEmail: false
+            disableGitToolChooser: false
+            hideCredentials: false
+            showEntireCommitSummaryInChanges: false
+            useExistingAccountWithSameEmail: false
+        tool:
+          git:
+            installations:
+              - home: "git"
+                name: "Default"
+          mavenGlobalConfig:
+            globalSettingsProvider: "standard"
+            settingsProvider: "standard"
+```
+
+```bash
+helm repo add jenkins https://charts.jenkins.io
+helm repo update
+helm upgrade --install --force jenkins jenkinsci/jenkins -f jenkins-values.yaml
+```
+
+Install plugins:
+https://plugins.jenkins.io/github/
+https://plugins.jenkins.io/github-oauth/
+https://plugins.jenkins.io/ansicolor/
+https://plugins.jenkins.io/blueocean/
