@@ -1408,3 +1408,34 @@ https://plugins.jenkins.io/github/
 https://plugins.jenkins.io/github-oauth/
 https://plugins.jenkins.io/ansicolor/
 https://plugins.jenkins.io/blueocean/
+
+# Sonatype Nexus 3
+
+The docker image has to be built for Raspbery PI.
+Clone:  https://github.com/sonatype/docker-nexus3
+```bash
+docker build . -t fractalwoodstories/nexus-arm64-3.64.0
+docker push fractalwoodstories/nexus-arm64-3.64.0
+```
+
+create values file:
+```yaml
+image:
+  repository: fractalwoodstories/nexus-arm64
+  tag: 3.64.0
+ingress:
+  enabled: true
+  hostPath: /nexus
+  hostRepo: calypso-binar.com
+nexus:
+  env:
+    - name: NEXUS_CONTEXT
+      value: /nexus
+```
+
+
+```bash
+helm repo add sonatype https://sonatype.github.io/helm3-charts/
+helm repo update
+helm upgrade --install --force -n nexus --create-namespace nexus-rm sonatype/nexus-repository-manager
+```
