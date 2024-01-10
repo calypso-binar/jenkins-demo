@@ -1430,12 +1430,16 @@ ingress:
 nexus:
   env:
     - name: NEXUS_CONTEXT
-      value: /nexus
+      value: nexus
+  livenessProbe:
+    path: /nexus
+  readinessProbe:
+    path: /nexus
 ```
 
 
 ```bash
 helm repo add sonatype https://sonatype.github.io/helm3-charts/
 helm repo update
-helm upgrade --install --force -n nexus --create-namespace nexus-rm sonatype/nexus-repository-manager
+helm upgrade --install --force -n nexus --create-namespace nexus-rm sonatype/nexus-repository-manager --values nexus-values.yaml
 ```
