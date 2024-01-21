@@ -855,7 +855,7 @@ helm repo update
 # use controller.extraArgs.default-ssl-certificate only if you have a certificate installed on Kubernetes as a secret.
 # otherwise, Kubernetes will provide a self-signed certificate
 helm upgrade --install --force ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace \
---set controller.extraArgs.default-ssl-certificate="ingress-nginx/no-ip-ssl-cert"
+--set controller.extraArgs.default-ssl-certificate="ingress-nginx/no-ip-ssl-cert" --set "controller.extraArgs.enable-ssl-passthrough="
 ```
 
 ## With cert-manager and let's encrypt certificate
@@ -954,8 +954,21 @@ spec:
 
 # NFS with NAS (Network Attached Storage) with USB
 TODO: highly available NAS
+
+# hardware
 First we will mount a USB Stick (or external SSD) to `/media/usb`.
-On one of the kubernetes nodes (you decide which0) put a USB stick / externall SSD into a USB.  
+On one of the kubernetes nodes (you decide which0) put a USB stick / external SSD into a USB.
+
+## nfs-kernel-server
+This piece of software will be able to serve directories as network attached storage (NAS).  
+In our case, the mounted usb device will be our NAS.
+
+https://ubuntu.com/server/docs/service-nfs
+Install nfs-kernel-server on a machine.
+```bash
+sudo apt install nfs-kernel-server network-manager --yes
+```
+
 To find out which device the USB is written:
 ```bash
 lsblk
@@ -974,19 +987,21 @@ mmcblk0     179:0    0  59.5G  0 disk
 ├─mmcblk0p1 179:1    0   512M  0 part /boot/firmware
 └─mmcblk0p2 179:2    0    59G  0 part /
 ```
-In this case, the sda1 is the USB device. It has ~465 GB, therefore it is my external SSD.
+In this case, the sda1 is the USB device. It has ~465 GB, therefore, it is my external SSD.
 
-Now we will mount the USB device, example with vfat file system:  
+Now we will mount the USB device, example with ext4 file system:  
 ```bash
 systemctl stop nfs-server
-fdisk /dev/sda1
+fdisk /dev/sda
 # follow instructions here: https://www.redips.net/linux/create-fat32-usb-drive/
 p # prints device info
-d # deletes partition
+d # deletes partition (delete all partitions if there are more)
 n # new partition
+p # primary partition
 # leave everything on default, except Y for remove signature 
 t # set partition type
 83 # alias for Linux
+w # write chnges
 
 sudo mkfs.ext4 /dev/sda1
 sudo mkdir -p /media/usb
@@ -1001,29 +1016,20 @@ loop4
 loop5
 loop6
 sda
-└─sda1      ext4   b6462122-3fa4-4cc6-8f04-36463b82dcf5
+└─sda1      ext4   a4974eea-9365-412e-8442-a5ed5eec538f
 mmcblk0
 ├─mmcblk0p1 vfat   81C9-1C52
 └─mmcblk0p2 ext4   d78ea5c7-a075-476e-acdd-a16cc2187931
 
 vi /etc/fstab
 # TABs are important
-UUID=47C8-238F  /media/usb      vfat    defaults        0       0
+UUID=a4974eea-9365-412e-8442-a5ed5eec538f  /media/usb      ext4    defaults        0       0
 
-# sudo mount -t vfat /dev/sda1 /media/usb -o uid=1000,gid=1000,utf8,dmask=027,fmask=137
+# sudo mount -t ext4 /dev/sda1 /media/usb -o uid=1000,gid=1000,utf8,dmask=027,fmask=137
 ```
 
 Now you can write to /media/usb whatever you want. 
 
-## nfs-kernel-server
-This piece of software will be able to serve directories as network attached storage (NAS).  
-In our case, the mounted usb device will be our NAS.
-
-https://ubuntu.com/server/docs/service-nfs
-Install nfs-kernel-server on a machine.
-```bash
-sudo apt install nfs-kernel-server network-manager --yes
-```
 Export the /media/usb to /etc/exports on an IP range allowed to access it:
 ```bash
 vi /etc/exports
@@ -1043,7 +1049,10 @@ sudo apt-get install nfs-common network-manager --yes
 sudo mkdir -p /media/usb
 # Mount the USB form the nfs manually:
 sudo mount -t nfs 192.168.1.100:/media/usb /media/usb
+# boot mount:
+vi /etc/fstab
 192.168.1.100:/media/usb    /media/usb   nfs defaults 0 0
+# :wq
 ```
 
 Note: the IP address is the host IP of the usb device.
@@ -1088,22 +1097,39 @@ grafana:
     pathType: ImplementationSpecific
     hosts:
       - calypso-binar.com
+  envFromSecret: grafana-github
   grafana.ini:
     server:
       root_url: https://calypso-binar.com/grafana # this host can be localhost
     datasources.yaml:
       apiVersion: 1
       datasources:
-      - name: Prometheus
-        type: prometheus
-        access: proxy
-        url: http://kube-prometheus-stack-prometheus:9090
-        isDefault: true  # Only one datasource should have this set to true
-      - name: Loki
-        type: Loki
-        access: proxy
-        url: http://loki-stack:3100
-        isDefault: false
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://kube-prometheus-stack-prometheus:9090
+          isDefault: true  # Only one datasource should have this set to true
+        - name: Loki
+          type: Loki
+          access: proxy
+          url: http://loki-stack:3100
+          isDefault: false
+    auth.github:
+      enabled: true
+      allow_sign_up: true
+      allow_assign_grafana_admin: true
+      role_attribute_strict: true
+      role_attribute_path: contains(groups[*], '@SpringStoreOrg/admin') && 'GrafanaAdmin' || contains(groups[*], '@SpringStoreOrg/dev') && 'Editor' || 'Viewer'
+      scopes: user:email,read:org
+      auth_url: https://github.com/login/oauth/authorize
+      token_url: https://github.com/login/oauth/access_token
+      api_url: https://api.github.com/user
+      team_ids: admin
+      allowed_organizations: SpringStoreOrg
+              #      client_id: c363c8d4734b7a166c09
+      #      client_secret: 3254b560314dd2858dde2a049e70c815d6a16d9d
+      client_id: ${client-id}
+      client_secret: ${client-secret}
 
 prometheus:
   ingress:
@@ -1185,7 +1211,26 @@ prometheus-node-exporter:
             - "__meta_kubernetes_pod_node_name"
 ```
 
+Please note, that the GitHub authentication is configured for SpringStoreOrg, change this as needed.  
+SpringStoreOrg has admin, and dev groups. You will use your own groups as needed.
+
+You will also need a kubernetes secret called grafana-github in the monitoring namespace 
+configured with a GitHub client id and client secret.  
+`grafana-github-secret.yaml`:  
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-github
+  namespace: monitoring
+type: Opaque
+data:
+  client-id: <GITHUB OAUTH APP CLIENT ID>
+  client-secret: <GITHUB OAUTH APP CLIENT SECRET>
+```
+
 ```bash
+kubectl apply -f grafana-github-secret.yaml
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts  
 helm repo update  
 helm upgrade --install --force -n monitoring --create-namespace kube-prometheus-stack prometheus-community/kube-prometheus-stack -f kube-prometheus-stack-values.yaml
@@ -1213,17 +1258,18 @@ helm upgrade --install --force -n monitoring --create-namespace loki-stack grafa
 # MariaDB
 https://www.datree.io/helm-chart/mariadb-bitnami
 
+mariadb-values.yaml:
+```yaml
+auth:
+  rootPassword: "YOUR PW HERE"
+```
+
 ```bash
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
 helm upgrade --install --force -n mariadb --create-namespace mariadb bitnami/mariadb -f mariadb-values.yaml
 ```
 
-mariadb-values.yaml:  
-```yaml
-auth:
-  rootPassword: "YOUR PW HERE"
-```
 
 # Jenkins
 
@@ -1400,14 +1446,30 @@ controller:
 ```bash
 helm repo add jenkins https://charts.jenkins.io
 helm repo update
-helm upgrade --install --force jenkins jenkinsci/jenkins -f jenkins-values.yaml
+helm upgrade --install --force --namespace jenkins --create-namespace jenkins jenkins/jenkins -f jenkins-values.yaml
 ```
+
+# Argo CD
+
+https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd
+
+```bash
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+helm upgrade --install --force --namespace argocd --create-namespace argocd argo/argo-cd
+```
+
 
 Install plugins:
 https://plugins.jenkins.io/github/
 https://plugins.jenkins.io/github-oauth/
 https://plugins.jenkins.io/ansicolor/
-https://plugins.jenkins.io/blueocean/
+# https://plugins.jenkins.io/blueocean/
+https://plugins.jenkins.io/pipeline-stage-view/
+
+Github app:
+bb2aeb8440696e98400c
+95fdca3b7bd1f9dbc401e34841bd9d26d8a703e4
 
 # Sonatype Nexus 3
 
