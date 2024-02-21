@@ -521,6 +521,17 @@ frontend apiserver
     option tcplog
     default_backend apiserverbackend
 
+
+#---------------------------------------------------------------------
+# stats frontend which serves metrics from HAProxy
+#---------------------------------------------------------------------
+frontend stats
+   bind *:8404
+   http-request use-service prometheus-exporter if { path /metrics }
+   stats enable
+   stats uri /stats
+   stats refresh 10s
+
 #---------------------------------------------------------------------
 # round robin balancing for apiserver
 #---------------------------------------------------------------------
@@ -1150,6 +1161,11 @@ prometheus:
     pathType: ImplementationSpecific
     hosts:
       - calypso-binar.com
+  prometheusSpec:
+    additionalScrapeConfigs:
+      - job_name: haproxy
+        static_configs:
+        - targets: ['192.168.1.100:8404','192.168.1.101:8404','192.168.1.102:8404']
         #  prometheusSpec:
         #    externalUrl: "https://calypso-binar.com/prometheus"
         #    routePrefix: "/prometheus"
