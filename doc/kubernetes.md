@@ -1114,6 +1114,8 @@ grafana:
           access: proxy
           url: http://loki-stack:3100
           isDefault: false
+    auth:
+      disable_login_form: true
     auth.github:
       enabled: true
       allow_sign_up: true
