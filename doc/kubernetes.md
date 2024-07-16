@@ -823,6 +823,7 @@ spec:
   - metallb-nginx-ingress
   interfaces:
   - wlan0
+  - eth0
 ```
 Replace IP_ADDRESS with the control plane-s ip address.
 
