@@ -449,7 +449,7 @@ vrrp_instance VI_1 {
     }
 }
 # ${STATE} is MASTER for one and BACKUP for all other hosts, hence the virtual IP will initially be assigned to the MASTER.
-# ${INTERFACE} is the network interface taking part in the negotiation of the virtual IP, e.g. eth0.
+# ${INTERFACE} is the network interface taking part in the negotiation of the virtual IP, e.g. eth0, wlan0.
 # ${ROUTER_ID} should be the same for all keepalived cluster hosts while unique amongst all clusters in the same subnet. 
 # Many distros pre-configure its value to 51.
 # ${PRIORITY} should be higher on the control plane node than on the backups. Hence 101 and 100 respectively will suffice.
