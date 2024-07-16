@@ -639,7 +639,7 @@ status: {}
 
 Init the control planes:
 ```bash
-sudo kubeadm init --control-plane-endpoint "192.168.1.150:6443" --upload-certs --pod-network-cidr 10.244.0.0/16
+sudo kubeadm init --apiserver-cert-extra-sans=calypso-binar.com --control-plane-endpoint "192.168.1.150:6443" --upload-certs --pod-network-cidr 10.244.0.0/16
 ```
 
 Join the other control planes:
