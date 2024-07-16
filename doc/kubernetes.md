@@ -1523,3 +1523,21 @@ helm repo add sonatype https://sonatype.github.io/helm3-charts/
 helm repo update
 helm upgrade --install --force -n nexus --create-namespace nexus-rm sonatype/nexus-repository-manager --values nexus-values.yaml
 ```
+
+# change / add new host to kubernetes certificates
+
+https://stackoverflow.com/questions/64470897/generating-a-new-conf-files-on-kubeadm-1-13-12  
+https://blog.scottlowe.org/2019/07/30/adding-a-name-to-kubernetes-api-server-certificate/  
+
+```bash
+kubectl -n kube-system get configmap kubeadm-config -o jsonpath='{.data.ClusterConfiguration}' > kubeadm.yaml  
+
+kubeadm init phase certs apiserver --config kubeadm.yaml  
+mv /etc/kubernetes/pki /etc/kubernetes/pki-backup  
+mv /etc/kubernetes/admin.conf /etc/kubernetes/admin.conf.backup  
+kubeadm init phase certs all  
+kubeadm init phase kubeconfig admin  
+crictl stopp $(crictl pods | grep kube-apiserver | cut -d' ' -f1) && crictl rmp $(crictl pods | grep kube-apiserver | cut -d' ' -f1)  
+
+kubeadm init phase upload-config kubeadm --config kubeadm.yaml
+```
